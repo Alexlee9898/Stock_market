@@ -137,6 +137,9 @@ export interface FinnhubEpsHistoryRow {
   surprise?: number | null;
   symbol?: string;
   year?: number;
+  /** 单季营收，Finnhub 常见为「百万美元」；大数时也可能为「美元」 */
+  revenueActual?: number | null;
+  revenueEstimate?: number | null;
 }
 
 export interface FinnhubEarningsCalendarRow {
@@ -359,4 +362,79 @@ export function formatMarketCapFromFinnhubMillionUsd(millionUsd: number | undefi
 export function metricNumber(m: FinnhubMetric | undefined, key: string): number | undefined {
   const v = m?.metric?.[key];
   return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+}
+
+/** 从 metric=all 中尝试多个市盈率字段（新股/亏损股字段可能不齐） */
+export function metricPeTtmBest(m: FinnhubMetric | undefined): number | undefined {
+  const keys = [
+    "peTTM",
+    "peBasicExclExtraTTM",
+    "peNormalizedAnnual",
+    "peAnnual",
+    "trailingPE",
+    "peInclExtraTTM",
+    "peExclExtraTTM",
+  ];
+  for (const k of keys) {
+    const v = metricNumber(m, k);
+    if (v != null && Number.isFinite(v) && Math.abs(v) < 1e6) return v;
+  }
+  return undefined;
+}
+
+/** 股息率（小数形式，如 0.02 表示 2%） */
+export function metricDividendYieldFraction(m: FinnhubMetric | undefined): number | undefined {
+  const keys = ["dividendYieldIndicatedAnnual", "dividendYieldTTM", "dividendYieldIndicatedAnnualDiluted"];
+  for (const k of keys) {
+    const v = metricNumber(m, k);
+    if (v != null && Number.isFinite(v) && v >= 0 && v < 0.5) return v;
+  }
+  return undefined;
+}
+
+/**
+ * Finnhub profile2：`shareOutstanding` 为百万股，`marketCapitalization` 为百万美元。
+ * 用 股价×流通股 与 API 市值比对，偏差过大时以前者为准（修正部分标的 API 市值陈旧/错误）。
+ */
+export function formatMarketCapResolved(profile: FinnhubProfile | undefined, quote: FinnhubQuote | null | undefined): string {
+  const apiMil = profile?.marketCapitalization;
+  const p = quote && quote.c > 0 ? quote.c : undefined;
+  const sharesMil = profile?.shareOutstanding;
+  let computedMil: number | undefined;
+  if (p != null && sharesMil != null && Number.isFinite(sharesMil) && sharesMil > 0) {
+    computedMil = p * sharesMil;
+  }
+  if (computedMil != null && apiMil != null && apiMil > 0) {
+    const hi = Math.max(computedMil, apiMil);
+    const lo = Math.min(computedMil, apiMil);
+    if (hi / lo > 4) {
+      return formatMarketCapFromFinnhubMillionUsd(computedMil);
+    }
+    return formatMarketCapFromFinnhubMillionUsd(apiMil);
+  }
+  if (apiMil != null) return formatMarketCapFromFinnhubMillionUsd(apiMil);
+  if (computedMil != null) return formatMarketCapFromFinnhubMillionUsd(computedMil);
+  return "—";
+}
+
+/**
+ * 52 周高低若与现价严重脱节（常见为数据源串线），返回 null 以提示用户核对。
+ */
+export function safe52WeekHighLow(
+  high: number | undefined,
+  low: number | undefined,
+  lastUsd: number | undefined,
+): { high: number; low: number } | null {
+  if (high == null || low == null || lastUsd == null) return null;
+  if (!Number.isFinite(high) || !Number.isFinite(low) || !Number.isFinite(lastUsd)) return null;
+  if (lastUsd <= 0 || low <= 0 || high < low) return null;
+  if (high / lastUsd > 4 || lastUsd / low > 4) return null;
+  return { high, low };
+}
+
+/** Finnhub /stock/earnings 的 revenueActual → 十亿美元（启发式） */
+export function revenueActualToBillionsUsd(revenue: number | null | undefined): number | undefined {
+  if (revenue == null || !Number.isFinite(revenue) || revenue <= 0) return undefined;
+  if (revenue >= 1e8) return revenue / 1e9;
+  return revenue / 1000;
 }

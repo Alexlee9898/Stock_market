@@ -1,9 +1,13 @@
 import { Link, useParams } from "react-router-dom";
 import {
-  formatMarketCapFromFinnhubMillionUsd,
+  formatMarketCapResolved,
   formatPercent,
   formatUsd,
+  metricDividendYieldFraction,
   metricNumber,
+  metricPeTtmBest,
+  revenueActualToBillionsUsd,
+  safe52WeekHighLow,
   type FinnhubEpsHistoryRow,
   type FinnhubProfile,
 } from "../api/finnhub";
@@ -117,7 +121,7 @@ export function StockDetail() {
         <p className="earnings-meta">报告期参考：{e.reportDate}</p>
         <div className="earnings-stats">
           <div className="earnings-stat">
-            <span className="earnings-label">营收（演示或 API）</span>
+            <span className="earnings-label">营收（公开接口）</span>
             <strong>{e.revenueBillions > 0 ? `${e.revenueBillions.toFixed(1)}B 美元` : "—"}</strong>
             <span className="earnings-sub">
               {e.revenueYoyPercent !== 0
@@ -166,7 +170,7 @@ export function StockDetail() {
       </section>
 
       <p className="disclaimer">
-        本站内容为教育演示，非投资建议。真实交易前请查阅公司 IR 页面、10-Q / 10-K 及监管披露。
+        本站内容非投资建议。真实交易前请查阅公司 IR 页面、10-Q / 10-K 及监管披露。
       </p>
     </main>
   );
@@ -201,27 +205,22 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
   const changePercentDisplay =
     livePrice && q.dp != null ? formatPercent(q.dp) : base?.changePercentDisplay ?? (api.loading ? "…" : "—");
 
-  const mcap =
-    api.profile?.marketCapitalization != null
-      ? formatMarketCapFromFinnhubMillionUsd(api.profile.marketCapitalization)
-      : base?.marketCapDisplay ?? "—";
+  const mcap = formatMarketCapResolved(api.profile ?? undefined, q);
 
-  const peRaw =
-    metricNumber(api.metric ?? undefined, "peTTM") ??
-    metricNumber(api.metric ?? undefined, "peBasicExclExtraTTM") ??
-    metricNumber(api.metric ?? undefined, "peNormalizedAnnual");
-  const peDisplay = peRaw != null ? `约 ${peRaw.toFixed(1)}×` : base?.peDisplay ?? "—";
+  const peRaw = metricPeTtmBest(api.metric ?? undefined);
+  const peDisplay =
+    peRaw != null && Number.isFinite(peRaw) ? `约 ${peRaw.toFixed(1)}×` : base?.peDisplay ?? "—";
 
-  const divRaw =
-    metricNumber(api.metric ?? undefined, "dividendYieldIndicatedAnnual") ??
-    metricNumber(api.metric ?? undefined, "dividendYieldTTM");
+  const divRaw = metricDividendYieldFraction(api.metric ?? undefined);
   const dividendYieldDisplay =
     divRaw != null ? `约 ${(divRaw * 100).toFixed(2)}%` : base?.dividendYieldDisplay ?? "—";
 
-  const h52 = metricNumber(api.metric ?? undefined, "52WeekHigh");
-  const l52 = metricNumber(api.metric ?? undefined, "52WeekLow");
-  const week52High = h52 != null ? h52.toFixed(2) : base?.week52High ?? "—";
-  const week52Low = l52 != null ? l52.toFixed(2) : base?.week52Low ?? "—";
+  const h52m = metricNumber(api.metric ?? undefined, "52WeekHigh");
+  const l52m = metricNumber(api.metric ?? undefined, "52WeekLow");
+  const lastPx = q && q.c > 0 ? q.c : undefined;
+  const r52 = safe52WeekHighLow(h52m, l52m, lastPx);
+  const week52High = r52 ? r52.high.toFixed(2) : base?.week52High ?? "—";
+  const week52Low = r52 ? r52.low.toFixed(2) : base?.week52Low ?? "—";
 
   const symKey = symbol.trim().toUpperCase();
   const nameHint = MEGA_FALLBACK_CARD_META[symKey];
@@ -234,6 +233,11 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
     `行业分类：${api.profile?.finnhubIndustry ?? "—"}。暂无公开简介字段；请结合官网披露与研报阅读。`;
 
   const latest = pickLatestEps(api.epsHistory);
+  const revB = revenueActualToBillionsUsd(latest?.revenueActual);
+  const revLine =
+    revB != null
+      ? `单季营收约 ${revB.toFixed(2)}B 美元（来自公开 earnings 的 revenueActual，单位已按常见口径估算，以公司正式财报为准）。`
+      : "";
   const latestEarnings: EarningsReport = base
     ? {
         ...base.latestEarnings,
@@ -244,6 +248,12 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
               epsActual: latest.actual ?? undefined,
               epsEstimate: latest.estimate ?? undefined,
               reportDate: latest.period ?? base.latestEarnings.reportDate,
+              ...(revB != null
+                ? {
+                    revenueBillions: revB,
+                    summary: revLine + (base.latestEarnings.summary?.trim() ? ` ${base.latestEarnings.summary}` : ""),
+                  }
+                : {}),
             }
           : {}),
       }
@@ -252,10 +262,11 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
         fiscalYear: latest?.year ?? new Date().getFullYear(),
         epsActual: latest?.actual ?? undefined,
         epsEstimate: latest?.estimate ?? undefined,
-        revenueBillions: 0,
+        revenueBillions: revB ?? 0,
         revenueYoyPercent: 0,
-        summary:
-          "以上为公开数据源中的季度 EPS 与一致预期对比；营收与同比需查阅公司完整财报（10-Q / press release）。",
+        summary: [revLine, "EPS 与一致预期对比如上；营收同比及其他口径请查阅 10-Q / press release。"]
+          .filter(Boolean)
+          .join(""),
         reportDate: latest?.period ?? "—",
       };
 
@@ -279,7 +290,18 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
 }
 
 function pickLatestEps(rows: FinnhubEpsHistoryRow[]) {
-  const ok = rows.filter((r) => r.actual != null && r.year != null && r.quarter != null);
+  const maxFuture = Date.now() + 86400000 * 400;
+  const ok = rows.filter((r) => {
+    if (r.actual == null || r.year == null || r.quarter == null) return false;
+    const y = r.year ?? 0;
+    if (y > new Date().getFullYear() + 1) return false;
+    const per = r.period;
+    if (per && typeof per === "string" && per.length >= 8) {
+      const t = Date.parse(per.slice(0, 10));
+      if (!Number.isNaN(t) && t > maxFuture) return false;
+    }
+    return true;
+  });
   ok.sort((a, b) => (b.year ?? 0) - (a.year ?? 0) || (b.quarter ?? 0) - (a.quarter ?? 0));
   return ok[0];
 }
