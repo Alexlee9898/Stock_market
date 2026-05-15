@@ -55,7 +55,8 @@ export function StockSearch() {
     };
   }, [q]);
 
-  const looksLikeTicker = (s: string) => /^[A-Za-z][A-Za-z0-9.]{0,9}$/.test(s.trim());
+  /** 仅允许常见美股代码形态，避免误拼长串被当成 ticker */
+  const looksLikeTicker = (s: string) => /^[A-Za-z]{1,6}(\.[A-Z])?$/.test(s.trim());
 
   const goSymbol = useCallback(
     (sym: string) => {
