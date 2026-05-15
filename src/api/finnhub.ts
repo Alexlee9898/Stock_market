@@ -77,6 +77,39 @@ export interface FinnhubQuote {
   t: number;
 }
 
+/** 去掉「交易所:代码」前缀并统一大小写，便于与 /quote 参数及 React 状态键一致 */
+export function normalizeTickerSymbol(raw: string | undefined): string {
+  if (!raw) return "";
+  let s = raw.trim().toUpperCase();
+  const colon = s.lastIndexOf(":");
+  if (colon !== -1 && colon < s.length - 1) {
+    s = s.slice(colon + 1).trim();
+  }
+  return s;
+}
+
+export function quoteHasDisplayablePrice(q: FinnhubQuote | null | undefined): boolean {
+  if (!q) return false;
+  const c = q.c;
+  const pc = q.pc;
+  return (typeof c === "number" && Number.isFinite(c) && c > 0) || (typeof pc === "number" && Number.isFinite(pc) && pc > 0);
+}
+
+export function quoteDisplayPrice(q: FinnhubQuote): number | null {
+  if (typeof q.c === "number" && Number.isFinite(q.c) && q.c > 0) return q.c;
+  if (typeof q.pc === "number" && Number.isFinite(q.pc) && q.pc > 0) return q.pc;
+  return null;
+}
+
+export function quoteDisplayChangePercent(q: FinnhubQuote): number | null {
+  if (q.dp != null && Number.isFinite(q.dp)) return q.dp;
+  const price = quoteDisplayPrice(q);
+  if (price != null && price > 0 && typeof q.pc === "number" && q.pc > 0) {
+    return ((price - q.pc) / q.pc) * 100;
+  }
+  return null;
+}
+
 export interface FinnhubProfile {
   country?: string;
   currency?: string;

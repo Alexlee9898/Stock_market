@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FinnhubQuote, FinnhubScreenerRow } from "../api/finnhub";
-import { getQuote, screenUsStocksByMarketCapMinBillion } from "../api/finnhub";
+import {
+  getQuote,
+  normalizeTickerSymbol,
+  quoteHasDisplayablePrice,
+  screenUsStocksByMarketCapMinBillion,
+} from "../api/finnhub";
 import { StockCard } from "../components/StockCard";
 import { StockSearch } from "../components/StockSearch";
 import { MEGA_CAP_FALLBACK_TICKERS } from "../data/megaCapFallback";
@@ -10,7 +15,7 @@ import { accentFromSymbol } from "../utils/symbolAccent";
 const MEGA_MIN_BILLION = 200;
 
 function screenerRowToHotStock(row: FinnhubScreenerRow): HotStock | null {
-  const symbol = row.symbol?.trim().toUpperCase();
+  const symbol = normalizeTickerSymbol(row.symbol);
   if (!symbol) return null;
   const name = (row.description ?? row.name ?? symbol).trim() || symbol;
   const tagline =
@@ -40,21 +45,25 @@ function sortMegaCaps(rows: FinnhubScreenerRow[]): FinnhubScreenerRow[] {
   return [...rows].sort((a, b) => (b.marketCapitalization ?? 0) - (a.marketCapitalization ?? 0));
 }
 
-async function loadQuotesChunked(symbols: string[], chunk = 14): Promise<Record<string, FinnhubQuote | null>> {
-  const uniq = [...new Set(symbols.map((s) => s.trim().toUpperCase()).filter(Boolean))];
+async function loadQuotesChunked(symbols: string[], chunk = 10): Promise<Record<string, FinnhubQuote | null>> {
+  const uniq = [...new Set(symbols.map((s) => normalizeTickerSymbol(s)).filter(Boolean))];
   const out: Record<string, FinnhubQuote | null> = {};
   for (let i = 0; i < uniq.length; i += chunk) {
     const part = uniq.slice(i, i + chunk);
     const settled = await Promise.allSettled(part.map((s) => getQuote(s)));
     settled.forEach((r, j) => {
       const sym = part[j];
-      out[sym] = r.status === "fulfilled" && r.value.c > 0 ? r.value : null;
+      out[sym] = r.status === "fulfilled" && quoteHasDisplayablePrice(r.value) ? r.value : null;
     });
+    if (i + chunk < uniq.length) {
+      await new Promise((r) => setTimeout(r, 80));
+    }
   }
   return out;
 }
 
 export function Home() {
+  const quoteFetchGen = useRef(0);
   const [megaStocks, setMegaStocks] = useState<HotStock[]>([]);
   const [megaLoading, setMegaLoading] = useState(true);
   const [megaError, setMegaError] = useState<string | null>(null);
@@ -94,15 +103,16 @@ export function Home() {
 
   useEffect(() => {
     if (megaStocks.length === 0) return;
+    const gen = ++quoteFetchGen.current;
     let cancelled = false;
     setQuotesLoading(true);
 
     (async () => {
-      const next = await loadQuotesChunked(megaStocks.map((s) => s.symbol));
-      if (!cancelled) {
-        setQuotes(next);
-        setQuotesLoading(false);
-      }
+      const syms = megaStocks.map((s) => normalizeTickerSymbol(s.symbol)).filter(Boolean);
+      const next = await loadQuotesChunked(syms);
+      if (cancelled || gen !== quoteFetchGen.current) return;
+      setQuotes(next);
+      setQuotesLoading(false);
     })();
 
     return () => {
@@ -137,9 +147,10 @@ export function Home() {
         {megaLoading ? <p className="muted">正在加载大盘股列表…</p> : null}
 
         <div className="stock-grid">
-          {sortedStocks.map((s) => (
-            <StockCard key={s.symbol} stock={s} quote={quotes[s.symbol]} quoteLoading={quotesLoading} />
-          ))}
+          {sortedStocks.map((s) => {
+            const qKey = normalizeTickerSymbol(s.symbol);
+            return <StockCard key={s.symbol} stock={s} quote={quotes[qKey]} quoteLoading={quotesLoading} />;
+          })}
         </div>
       </section>
     </main>
