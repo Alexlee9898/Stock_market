@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { EventRow } from "../components/EventRow";
-import { DataSourceNote } from "../components/DataSourceNote";
 import { categoryLabels, upcomingEvents } from "../data/events";
 import { fetchMergedCalendar } from "../api/calendarFromFinnhub";
 import type { CalendarEvent } from "../types";
@@ -19,13 +18,9 @@ export function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>(() =>
     [...upcomingEvents].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? "")),
   );
-  const [noteVariant, setNoteVariant] = useState<"demo" | "live" | "loading" | "error">("loading");
-  const [noteDetail, setNoteDetail] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
-    setNoteVariant("loading");
-    setNoteDetail(undefined);
 
     const from = formatLocalDate(new Date());
     const end = new Date();
@@ -37,16 +32,11 @@ export function CalendarPage() {
         const merged = await fetchMergedCalendar({ from, to });
         if (cancelled) return;
         setEvents(merged);
-        setNoteVariant("live");
-        setNoteDetail(undefined);
-      } catch (e) {
+      } catch {
         if (cancelled) return;
-        const msg = e instanceof Error ? e.message : String(e);
         setEvents(
           [...upcomingEvents].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? "")),
         );
-        setNoteVariant("error");
-        setNoteDetail(msg);
       }
     })();
 
@@ -70,14 +60,8 @@ export function CalendarPage() {
 
   return (
     <main className="page">
-      <DataSourceNote variant={noteVariant} detail={noteDetail} />
-
       <section className="hero hero--compact">
-        <p className="hero-eyebrow">未来约一个月</p>
         <h1 className="hero-title">财经日历</h1>
-        <p className="hero-sub">
-          宏观数据、美联储相关日程、财报与 IPO 来自 Finnhub 日历接口（范围：今天起约 5 周），并与本地「其他」示例条目合并。
-        </p>
       </section>
 
       <div className="filter-bar" role="tablist" aria-label="事件类型筛选">

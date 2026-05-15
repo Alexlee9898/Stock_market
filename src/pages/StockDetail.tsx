@@ -6,7 +6,6 @@ import {
   metricNumber,
   type FinnhubEpsHistoryRow,
 } from "../api/finnhub";
-import { DataSourceNote } from "../components/DataSourceNote";
 import { useStockApi } from "../hooks/useStockApi";
 import { getStockDetail } from "../data/stocks";
 import type { EarningsReport, StockDetail } from "../types";
@@ -37,13 +36,6 @@ export function StockDetail() {
   }
 
   const merged = mergeDetail(base, symbol, api);
-  const noteVariant: "demo" | "live" | "loading" | "error" = api.loading
-    ? "loading"
-    : api.error
-      ? "error"
-      : api.quote && api.quote.c > 0
-        ? "live"
-        : "demo";
 
   const e = merged.latestEarnings;
   const beat =
@@ -51,8 +43,6 @@ export function StockDetail() {
 
   return (
     <main className="page page--detail">
-      <DataSourceNote variant={noteVariant} detail={api.error ?? undefined} />
-
       <div className="breadcrumb">
         <Link to="/" className="text-link">
           热门公司
