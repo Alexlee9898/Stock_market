@@ -90,6 +90,176 @@ export const industries: IndustryTheme[] = [
     ],
   },
   {
+    slug: "semiconductor",
+    titleZh: "半导体",
+    titleEn: "Semiconductor",
+    coverage:
+      "行业处于「总量复苏、结构性过热、赛道分化」：AI 算力、HBM、先进封装与高端设备高景气；成熟制程、功率器件与部分材料仍处去库存后的修复期。投资上宜区分产业地位与估值位置，并关注资本开支、地缘与出口管制（教学演示，非投资建议）。",
+    picks: [
+      {
+        id: "semi-1",
+        name: "NVIDIA",
+        ticker: "NVDA",
+        market: "us",
+        summary:
+          "AI 计算平台龙头；数据中心收入与毛利率处于高位，但估值已充分反映高预期，需跟踪云厂商 CAPEX 与竞争分流。",
+        industryPosition: "GPU / AI 系统 / 网络与软件生态（CUDA、机架级方案）。",
+        mainSegments: "数据中心、游戏、专业可视化、汽车。",
+        companyDescription:
+          "英伟达不止卖芯片，而是以 GPU + 系统软件 + 开发者生态锁定客户。AI 训练向推理扩散、企业 Agent 与整机占比提升是中期逻辑；风险在于定制 ASIC 分流、出口限制与板块估值过热。",
+        coreReasons: [
+          "占据 AI 算力主赛道平台位，数据中心业务贡献主要收入与利润弹性。",
+          "CUDA 与整机协同形成高迁移成本，但股价已对高增长定价，容错率偏低。",
+          "需持续跟踪大客户资本开支节奏、竞争格局与监管政策变化。",
+        ],
+      },
+      {
+        id: "semi-2",
+        name: "AMD",
+        ticker: "AMD",
+        market: "us",
+        summary: "x86 服务器 CPU 与 Instinct GPU 双轮驱动；在 AI 与通用算力上追赶龙头，估值波动大。",
+        industryPosition: "CPU、GPU、AI 加速器与数据中心解决方案。",
+        mainSegments: "数据中心、客户端、游戏、嵌入式。",
+        companyDescription:
+          "AMD 在服务器 CPU 份额提升的同时布局 Instinct 系列 AI 芯片，客户以云厂商与 OEM 为主。产业逻辑清晰，但相对 NVIDIA 仍处第二梯队，盈利与估值对周期更敏感。",
+        coreReasons: [
+          "服务器 CPU 与 AI GPU 产品线协同，受益于云与 HPC 资本开支。",
+          "与英特尔、英伟达竞争加剧，份额与定价需季度验证。",
+          "高成长预期下估值弹性大，业绩不及预期时回撤风险较高。",
+        ],
+      },
+      {
+        id: "semi-3",
+        name: "Broadcom",
+        ticker: "AVGO",
+        market: "us",
+        summary: "定制 AI 加速器与 AI 网络芯片高景气；客户集中度较高，属 AI 基础设施「卖铲人」逻辑。",
+        industryPosition: "定制 ASIC、以太网 / AI 网络、连接与基础设施软件。",
+        mainSegments: "半导体解决方案、基础设施软件（收购整合后）。",
+        companyDescription:
+          "博通深度绑定超大规模云客户的定制芯片与网络需求，在 AI 集群互连上份额突出。商业模式偏长单与客户绑定，但收入集中与估值高位是主要风险。",
+        coreReasons: [
+          "定制 AI 芯片与网络需求随云 CAPEX 扩张，短期景气度强。",
+          "大客户订单可见度高，但集中度带来单一客户砍单风险。",
+          "并购整合与软件业务改善利润结构，需关注监管与估值。",
+        ],
+      },
+      {
+        id: "semi-4",
+        name: "Taiwan Semiconductor",
+        ticker: "TSM",
+        market: "us",
+        summary: "先进制程代工龙头；3nm/5nm/7nm 收入占比高，AI/HPC 订单饱满，地缘风险为定价核心变量。",
+        industryPosition: "先进逻辑代工、先进封装（CoWoS 等）协同。",
+        mainSegments: "晶圆代工、先进封装与掩膜服务等。",
+        companyDescription:
+          "台积电专注代工，良率与客户共研构成壁垒。N2 等节点与先进封装是 AI 算力扩张的关键产能；股票除成长外须为地缘政治与区域集中度留出折价空间。",
+        coreReasons: [
+          "全球先进逻辑制造枢纽，先进制程收入占比持续提升。",
+          "与苹果、英伟达等头部客户绑定深，产能利用率影响盈利。",
+          "地缘与出口管制议题可能放大股价波动，不宜只看产业地位。",
+        ],
+      },
+      {
+        id: "semi-5",
+        name: "ASML",
+        ticker: "ASML",
+        market: "us",
+        summary: "EUV 光刻近乎独占；设备 + 升级 + 服务复利模型，但出口管制与客户 CAPEX 波动是核心风险。",
+        industryPosition: "光刻、量测、计算光刻与装机基盘管理。",
+        mainSegments: "EUV/DUV 系统、安装基础服务、计算光刻软件。",
+        companyDescription:
+          "ASML 代表半导体设备最高壁垒环节，EUV 对先进制程不可或缺。收入质量与毛利率极高；风险主要来自地缘政治下的出口限制及晶圆厂资本开支周期。",
+        coreReasons: [
+          "EUV 在先进节点具备稀缺性，订单与装机基盘提供长期收入。",
+          "毛利率与研发强度领先设备行业，盈利质量突出。",
+          "出口管制与客户扩产节奏延迟可能显著影响短期业绩与股价。",
+        ],
+      },
+      {
+        id: "semi-6",
+        name: "Micron",
+        ticker: "MU",
+        market: "us",
+        summary: "DRAM / NAND / HBM 全面受益 AI 周期；存储属高弹性品类，价格波动仍不可忽视。",
+        industryPosition: "存储芯片设计制造（美国存储龙头）。",
+        mainSegments: "DRAM、NAND、HBM、数据中心与移动端存储。",
+        companyDescription:
+          "美光在本轮 AI 周期中受益于 HBM 与数据中心存储需求，各业务单元收入曾创阶段高点。投资属性偏周期反转与高成长叠加，需跟踪存储价格与库存。",
+        coreReasons: [
+          "HBM 与 AI 服务器拉动高端 DRAM 需求，景气度处于上行。",
+          "存储行业仍具价格周期，盈利对供需平衡敏感。",
+          "资本开支与产能扩张若过快，中期可能压制价格与利润率。",
+        ],
+      },
+      {
+        id: "semi-7",
+        name: "Applied Materials",
+        ticker: "AMAT",
+        market: "us",
+        summary: "平台型前道设备巨头；覆盖沉积、刻蚀、CMP 等多品类，受益全球晶圆厂资本开支。",
+        industryPosition: "半导体制造设备（平台型）。",
+        mainSegments: "晶圆制造设备、封装设备与服务。",
+        companyDescription:
+          "应用材料品类最全的前道设备厂商之一，客户涵盖 Foundry、Memory 与 IDM。逻辑是 AI 与本土化扩产带动设备支出；风险为周期下行与部分市场出口限制。",
+        coreReasons: [
+          "平台化设备组合提高单客户渗透与替换成本。",
+          "SEMI 等机构预计晶圆厂设备支出仍处扩张，订单可见度较好。",
+          "存储与成熟制程资本开支回落时，收入与估值可能承压。",
+        ],
+      },
+      {
+        id: "semi-8",
+        name: "Lam Research",
+        ticker: "LRCX",
+        market: "us",
+        summary: "刻蚀与沉积设备核心供应商；存储与先进逻辑扩产均受益，存储周期影响显著。",
+        industryPosition: "刻蚀、薄膜沉积、清洗设备。",
+        mainSegments: "前道刻蚀/沉积、晶圆制造服务与相关技术。",
+        companyDescription:
+          "泛林在刻蚀与沉积工艺积累深，是存储厂与先进逻辑厂关键供应商。AI 带动的高端产能建设支撑需求；需关注 NAND/DRAM 周期与对华出口政策。",
+        coreReasons: [
+          "刻蚀/沉积为晶圆制造关键步骤，客户验证周期长、粘性强。",
+          "先进逻辑与 HBM 相关产能扩张带来增量订单。",
+          "存储景气回落或限制放松节奏变化，可能影响短期业绩。",
+        ],
+      },
+      {
+        id: "semi-9",
+        name: "onsemi",
+        ticker: "ON",
+        market: "us",
+        summary: "汽车与工业功率半导体；处于修复期，盈利改善慢于 AI 链，更像周期反转标的。",
+        industryPosition: "功率器件、传感与模拟（车规与工业）。",
+        mainSegments: "汽车电子、工业、云电源等。",
+        companyDescription:
+          "安森美聚焦车规与工业功率，与 AI 算力链景气不同步。2026 年一季度呈现同比修复但盈利能力尚未全面恢复，适合按库存周期与车端需求跟踪。",
+        coreReasons: [
+          "汽车电动化与工业自动化提供中长期需求底座。",
+          "去库存结束后收入修复，但毛利率与产能利用率仍待验证。",
+          "与 AI 主线相比弹性偏弱，宜按周期股框架估值。",
+        ],
+      },
+      {
+        id: "semi-10",
+        name: "Entegris",
+        ticker: "ENTG",
+        market: "us",
+        summary: "特种材料与耗材；先进制程对纯度与供应稳定性要求高，偏「高黏性耗材」逻辑。",
+        industryPosition: "半导体材料、过滤与传输解决方案。",
+        mainSegments: "先进材料、微污染控制、特种化学品与 handling。",
+        companyDescription:
+          "Entegris 处于上游材料环节，客户认证周期长、切换成本高。先进制程与 HBM 扩产拉动特种材料需求；景气更多随晶圆厂稼动率与资本开支波动。",
+        coreReasons: [
+          "材料环节一旦导入产线，收入具备持续性与复购属性。",
+          "先进节点对污染控制与化学品纯度要求提升，利好龙头。",
+          "晶圆厂减产或去库存阶段，耗材需求可能阶段性走弱。",
+        ],
+      },
+    ],
+  },
+  {
     slug: "robotics",
     titleZh: "机器人",
     titleEn: "Robotics",
