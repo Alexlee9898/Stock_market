@@ -50,7 +50,7 @@ export function Home() {
       <section className="section">
         <div className="section-head">
           <h2 className="section-title">热门美股</h2>
-          <p className="section-desc">点击卡片查看公司信息、关键指标与财报相关字段（并与 Finnhub 数据合并展示）。</p>
+          <p className="section-desc">点击卡片查看公司信息、关键指标与财报相关字段（可与公开行情数据合并展示）。</p>
         </div>
         <div className="stock-grid">
           {sortedStocks.map((s) => (

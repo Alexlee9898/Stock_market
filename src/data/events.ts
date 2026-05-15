@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "../types";
 
-/** 演示用未来一月日历：实际项目可接 Finnhub / Nasdaq / 财经日历 API */
+/** 演示用未来一月日历：实际项目可接公开财经日历 / 交易所 API */
 export const upcomingEvents: CalendarEvent[] = [
   {
     id: "e1",

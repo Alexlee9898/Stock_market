@@ -1,12 +1,12 @@
 /**
- * Finnhub REST（经同源 /api/fproxy?p=子路径 转发；本地 Vite 与 Vercel Edge 一致）
+ * 行情与日历 REST（经同源 /api/fproxy?p=子路径 转发；本地 Vite 与 Vercel Edge 一致）
  *
- * 其他可选 API（可自行替换数据源）：
- * - Financial Modeling Prep：财报/日历较全，免费档约 250 次/天，需 apikey。
- * - Polygon（现品牌 Massive）：行情与 aggregates 强，免费档请求频率低。
- * - Alpha Vantage：适合入门，免费档额度紧、限速严。
- * - 宏观日历：TradingEconomics 等有独立套餐；Finnhub 已含 economic calendar。
- * - IPO：Finnhub /calendar/ipo；Renaissance Capital 另有免费档 IPO 日期接口（需单独注册）。
+ * 其他可选数据源（可自行替换）：
+ * - Financial Modeling Prep：财报/日历较全，免费档有日调用上限。
+ * - Polygon（现品牌 Massive）：K 线与聚合行情。
+ * - Alpha Vantage：入门友好，免费档较紧。
+ * - 宏观日历：TradingEconomics 等独立服务。
+ * - IPO：交易所与财经媒体日历等。
  */
 
 const PREFIX = "/api/fproxy";
@@ -21,7 +21,7 @@ async function finnhubFetch(pathWithQuery: string): Promise<unknown> {
   const res = await fetch(`${PREFIX}?${params.toString()}`);
   const ct = res.headers.get("content-type") ?? "";
   if (ct.includes("text/html")) {
-    throw new Error("Finnhub 代理返回了 HTML 而非 JSON，多为部署里 /api 被错误重写到首页；请检查 vercel.json 是否排除 /api。");
+    throw new Error("行情代理返回了 HTML 而非 JSON，请检查部署配置中的 /api 路由是否被误指向首页。");
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -33,7 +33,7 @@ async function finnhubFetch(pathWithQuery: string): Promise<unknown> {
     } catch {
       /* keep raw text */
     }
-    throw new Error(`Finnhub HTTP ${res.status} ${extra}`.slice(0, 400));
+    throw new Error(`行情接口 HTTP ${res.status} ${extra}`.slice(0, 400));
   }
   return res.json() as Promise<unknown>;
 }

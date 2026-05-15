@@ -2,8 +2,8 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
 /**
- * Finnhub 在浏览器里直连常有 CORS；本地通过 /api/fproxy?p=子路径&… 代理到 finnhub.io/api/v1。
- * 密钥只放在 .env 的 FINNHUB_API_KEY。
+ * 浏览器直连上游常有 CORS；本地通过 /api/fproxy?p=子路径走开发代理。
+ * 密钥放在 .env 的 FINNHUB_API_KEY。
  */
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");

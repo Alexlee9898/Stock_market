@@ -27,7 +27,7 @@ export function StockDetail() {
   if (showNotFound) {
     return (
       <main className="page page--narrow">
-        <p className="muted">未找到该股票资料（演示库与 Finnhub 均无有效结果）。</p>
+        <p className="muted">未找到该公司资料（本地演示与线上数据均未返回有效结果）。</p>
         <Link to="/" className="text-link">
           返回首页
         </Link>
@@ -186,13 +186,13 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
     metricNumber(api.metric ?? undefined, "peTTM") ??
     metricNumber(api.metric ?? undefined, "peBasicExclExtraTTM") ??
     metricNumber(api.metric ?? undefined, "peNormalizedAnnual");
-  const peDisplay = peRaw != null ? `约 ${peRaw.toFixed(1)}×（Finnhub）` : base?.peDisplay ?? "—";
+  const peDisplay = peRaw != null ? `约 ${peRaw.toFixed(1)}×` : base?.peDisplay ?? "—";
 
   const divRaw =
     metricNumber(api.metric ?? undefined, "dividendYieldIndicatedAnnual") ??
     metricNumber(api.metric ?? undefined, "dividendYieldTTM");
   const dividendYieldDisplay =
-    divRaw != null ? `约 ${(divRaw * 100).toFixed(2)}%（Finnhub）` : base?.dividendYieldDisplay ?? "—";
+    divRaw != null ? `约 ${(divRaw * 100).toFixed(2)}%` : base?.dividendYieldDisplay ?? "—";
 
   const h52 = metricNumber(api.metric ?? undefined, "52WeekHigh");
   const l52 = metricNumber(api.metric ?? undefined, "52WeekLow");
@@ -201,10 +201,10 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
 
   const name = base?.name ?? api.profile?.name ?? symbol;
   const nameZh = base?.nameZh ?? api.profile?.name ?? symbol;
-  const sector = base?.sector ?? (api.profile?.finnhubIndustry ? `${api.profile.finnhubIndustry}（Finnhub）` : "—");
+  const sector = base?.sector ?? (api.profile?.finnhubIndustry ? `${api.profile.finnhubIndustry}（公开分类）` : "—");
   const description =
     base?.description ??
-    `Finnhub 行业分类：${api.profile?.finnhubIndustry ?? "—"}。暂无中文长简介；请结合官网披露与研报阅读。`;
+    `行业分类：${api.profile?.finnhubIndustry ?? "—"}。暂无中文长简介；请结合官网披露与研报阅读。`;
 
   const latest = pickLatestEps(api.epsHistory);
   const latestEarnings: EarningsReport = base
@@ -228,7 +228,7 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
         revenueBillions: 0,
         revenueYoyPercent: 0,
         summary:
-          "以上为 Finnhub 公布的季度 EPS 与一致预期对比；营收与同比需查阅公司完整财报（10-Q / press release）。",
+          "以上为公开数据源中的季度 EPS 与一致预期对比；营收与同比需查阅公司完整财报（10-Q / press release）。",
         reportDate: latest?.period ?? "—",
       };
 

@@ -1,8 +1,8 @@
 export const config = { runtime: "edge" };
 
 /**
- * Finnhub 转发（Vercel Edge）。请求 `/api/fproxy?p=quote&symbol=AAPL`
- * 或 `p=calendar%2Fearnings&from=…`（p 为 v1 下的子路径，可含 /）。
+ * 行情数据转发（Vercel Edge）。请求 `/api/fproxy?p=quote&symbol=AAPL`
+ * 或 `p=calendar%2Fearnings&from=…`（p 为上游 v1 子路径，可含 /）。
  */
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -21,8 +21,8 @@ export default async function handler(request: Request): Promise<Response> {
   if (!token) {
     return Response.json(
       {
-        error: "FINNHUB_API_KEY is not configured on the server",
-        hint: "Vercel: Project → Settings → Environment Variables → 添加 FINNHUB_API_KEY（勾选 Production），Save 后到 Deployments 对最新部署执行 Redeploy。",
+        error: "SERVER_QUOTE_KEY_MISSING",
+        hint: "请在部署平台为该项目配置行情接口密钥环境变量，保存后重新部署。",
       },
       { status: 503 },
     );
