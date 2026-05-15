@@ -1,5 +1,5 @@
 /**
- * Finnhub REST（经 Vite 代理 /api/finnhub → https://finnhub.io/api/v1）
+ * Finnhub REST（经同源 /api/fproxy?p=子路径 转发；本地 Vite 与 Vercel Edge 一致）
  *
  * 其他可选 API（可自行替换数据源）：
  * - Financial Modeling Prep：财报/日历较全，免费档约 250 次/天，需 apikey。
@@ -9,11 +9,16 @@
  * - IPO：Finnhub /calendar/ipo；Renaissance Capital 另有免费档 IPO 日期接口（需单独注册）。
  */
 
-const PREFIX = "/api/finnhub";
+const PREFIX = "/api/fproxy";
 
 async function finnhubFetch(pathWithQuery: string): Promise<unknown> {
-  const path = pathWithQuery.startsWith("/") ? pathWithQuery : `/${pathWithQuery}`;
-  const res = await fetch(`${PREFIX}${path}`);
+  const normalized = pathWithQuery.startsWith("/") ? pathWithQuery.slice(1) : pathWithQuery;
+  const qMark = normalized.indexOf("?");
+  const pathOnly = qMark === -1 ? normalized : normalized.slice(0, qMark);
+  const existingQs = qMark === -1 ? "" : normalized.slice(qMark + 1);
+  const params = new URLSearchParams(existingQs);
+  params.set("p", pathOnly);
+  const res = await fetch(`${PREFIX}?${params.toString()}`);
   const ct = res.headers.get("content-type") ?? "";
   if (ct.includes("text/html")) {
     throw new Error("Finnhub 代理返回了 HTML 而非 JSON，多为部署里 /api 被错误重写到首页；请检查 vercel.json 是否排除 /api。");

@@ -2,22 +2,26 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
 /**
- * Finnhub 在浏览器里直连常有 CORS 问题；通过本地代理在服务端路径拼接 token，
- * 密钥只放在 .env 的 FINNHUB_API_KEY，不会打进前端 bundle。
+ * Finnhub 在浏览器里直连常有 CORS；本地通过 /api/fproxy?p=子路径&… 代理到 finnhub.io/api/v1。
+ * 密钥只放在 .env 的 FINNHUB_API_KEY。
  */
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const finnhubKey = env.FINNHUB_API_KEY ?? "";
 
   const finnhubProxy = {
-    "/api/finnhub": {
+    "/api/fproxy": {
       target: "https://finnhub.io/api/v1",
       changeOrigin: true,
-      rewrite: (path) => {
-        const stripped = path.replace(/^\/api\/finnhub/, "");
-        if (!finnhubKey) return stripped;
-        const join = stripped.includes("?") ? "&" : "?";
-        return `${stripped}${join}token=${encodeURIComponent(finnhubKey)}`;
+      rewrite: (fullPath) => {
+        const u = new URL(fullPath, "http://localhost");
+        const p = u.searchParams.get("p") ?? "";
+        u.searchParams.delete("p");
+        if (!p || p.includes("..")) return fullPath;
+        if (!finnhubKey) return `/${p}${u.search}`;
+        u.searchParams.set("token", finnhubKey);
+        const qs = u.searchParams.toString();
+        return `/${p}${qs ? `?${qs}` : ""}`;
       },
     },
   };
