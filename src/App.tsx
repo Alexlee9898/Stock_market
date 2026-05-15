@@ -19,7 +19,7 @@ export default function App() {
           <Route path="/stock/:symbol" element={<StockDetail />} />
         </Routes>
         <footer className="site-footer">
-          <p>美股学习演示 · 界面灵感来自 Apple 产品页的留白与排版节奏</p>
+          <p>US MARKET LEARN · TERMINAL UI v1 · 教育演示，非投资建议</p>
         </footer>
       </div>
     </BrowserRouter>

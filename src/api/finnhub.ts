@@ -38,6 +38,34 @@ async function finnhubFetch(pathWithQuery: string): Promise<unknown> {
   return res.json() as Promise<unknown>;
 }
 
+async function finnhubPostJson(subPath: string, body: Record<string, unknown>): Promise<unknown> {
+  const normalized = subPath.replace(/^\/+|\/+$/g, "");
+  const params = new URLSearchParams();
+  params.set("p", normalized);
+  const res = await fetch(`${PREFIX}?${params.toString()}`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const ct = res.headers.get("content-type") ?? "";
+  if (ct.includes("text/html")) {
+    throw new Error("行情代理返回了 HTML 而非 JSON，请检查部署配置中的 /api 路由是否被误指向首页。");
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    let extra = text;
+    try {
+      const j = JSON.parse(text) as { hint?: string; error?: string };
+      if (j.hint) extra = `${j.error ?? ""} — ${j.hint}`;
+      else if (j.error) extra = j.error;
+    } catch {
+      /* keep raw text */
+    }
+    throw new Error(`行情接口 HTTP ${res.status} ${extra}`.slice(0, 400));
+  }
+  return res.json() as Promise<unknown>;
+}
+
 export interface FinnhubQuote {
   c: number;
   d: number | null;
@@ -152,6 +180,61 @@ export async function getIpoCalendar(range: CalendarRange) {
   const raw = (await finnhubFetch(`/calendar/ipo?${q}`)) as { ipoCalendar?: FinnhubIpoCalendarRow[] } | FinnhubIpoCalendarRow[];
   if (Array.isArray(raw)) return raw;
   return raw.ipoCalendar ?? [];
+}
+
+/** 股票筛选返回行（字段名随上游版本可能略有差异） */
+export interface FinnhubScreenerRow {
+  symbol?: string;
+  name?: string;
+  description?: string;
+  marketCapitalization?: number;
+  finnhubIndustry?: string;
+}
+
+export interface FinnhubSearchHit {
+  description?: string;
+  displaySymbol?: string;
+  symbol?: string;
+  type?: string;
+  currency?: string;
+}
+
+function parseScreenerRows(data: unknown): FinnhubScreenerRow[] {
+  if (!data || typeof data !== "object") return [];
+  if ("error" in data) return [];
+  if (Array.isArray(data)) return data as FinnhubScreenerRow[];
+  const d = (data as { data?: unknown }).data;
+  return Array.isArray(d) ? (d as FinnhubScreenerRow[]) : [];
+}
+
+/**
+ * 美股市值筛选（Finnhub 筛选条件中市值单位为「百万美元」）。
+ * @param minBillionUsd 最低市值，单位：十亿美元（例如 200 表示 2000 亿美元）
+ */
+export async function screenUsStocksByMarketCapMinBillion(minBillionUsd: number): Promise<FinnhubScreenerRow[]> {
+  const minMillionUsd = minBillionUsd * 1000;
+  const primary = { exchange: "US", marketCapitalizationMin: minMillionUsd };
+  const data = await finnhubPostJson("stock/screener", primary);
+  const rows = parseScreenerRows(data);
+  if (rows.length > 0) return rows;
+  const alt = await finnhubPostJson("stock/screener", { exchange: "US", minMarketCapitalization: minMillionUsd });
+  return parseScreenerRows(alt);
+}
+
+/** 全市场符号搜索（结果需自行过滤为美股普通股等） */
+export async function searchStockSymbols(query: string): Promise<FinnhubSearchHit[]> {
+  const q = query.trim();
+  if (q.length < 1) return [];
+  const data = (await finnhubFetch(`search?q=${encodeURIComponent(q)}`)) as { result?: FinnhubSearchHit[] };
+  const raw = data.result ?? [];
+  return raw.filter((r) => {
+    const sym = r.symbol?.trim();
+    if (!sym || sym.includes(":")) return false;
+    const t = (r.type ?? "").toLowerCase();
+    if (!t.includes("common") && !t.includes("adr")) return false;
+    const cur = (r.currency ?? "USD").toUpperCase();
+    return cur === "USD";
+  });
 }
 
 export function formatUsd(n: number, digits = 2) {

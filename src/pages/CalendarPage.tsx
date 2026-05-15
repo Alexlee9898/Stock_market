@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { EventRow } from "../components/EventRow";
-import { categoryLabels, upcomingEvents } from "../data/events";
-import { fetchMergedCalendar } from "../api/calendarFromFinnhub";
+import { categoryLabels } from "../data/events";
+import { fetchMergedCalendar, getFallbackCalendarEvents } from "../api/calendarFromFinnhub";
 import type { CalendarEvent } from "../types";
 
 type Filter = "all" | CalendarEvent["category"];
@@ -15,9 +15,7 @@ function formatLocalDate(d: Date) {
 
 export function CalendarPage() {
   const [filter, setFilter] = useState<Filter>("all");
-  const [events, setEvents] = useState<CalendarEvent[]>(() =>
-    [...upcomingEvents].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? "")),
-  );
+  const [events, setEvents] = useState<CalendarEvent[]>(() => getFallbackCalendarEvents());
 
   useEffect(() => {
     let cancelled = false;
@@ -34,9 +32,7 @@ export function CalendarPage() {
         setEvents(merged);
       } catch {
         if (cancelled) return;
-        setEvents(
-          [...upcomingEvents].sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? "").localeCompare(b.time ?? "")),
-        );
+        setEvents(getFallbackCalendarEvents());
       }
     })();
 
