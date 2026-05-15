@@ -9,7 +9,7 @@ import {
 } from "../api/finnhub";
 import { StockCard } from "../components/StockCard";
 import { StockSearch } from "../components/StockSearch";
-import { MEGA_CAP_FALLBACK_TICKERS, MEGA_FALLBACK_CARD_META } from "../data/megaCapFallback";
+import { MEGA_CAP_FALLBACK_TICKERS, MEGA_EXTRA_TICKERS, MEGA_FALLBACK_CARD_META } from "../data/megaCapFallback";
 import type { HotStock } from "../types";
 import { accentFromSymbol } from "../utils/symbolAccent";
 
@@ -60,6 +60,24 @@ function sortMegaCaps(rows: FinnhubScreenerRow[]): FinnhubScreenerRow[] {
   return [...rows].sort((a, b) => (b.marketCapitalization ?? 0) - (a.marketCapitalization ?? 0));
 }
 
+/** 将用户指定标的并入列表（去重），用于万亿筛选之外仍展示 Tesla 等 */
+function mergeExtraMegaStocks(mapped: HotStock[]): HotStock[] {
+  const have = new Set(mapped.map((m) => m.symbol));
+  const extra: HotStock[] = [];
+  for (const sym of MEGA_EXTRA_TICKERS) {
+    if (have.has(sym)) continue;
+    const meta = MEGA_FALLBACK_CARD_META[sym];
+    extra.push({
+      symbol: sym,
+      name: meta?.name ?? sym,
+      nameZh: meta?.nameZh ?? sym,
+      tagline: meta?.tagline ?? "美股",
+      accent: accentFromSymbol(sym),
+    });
+  }
+  return [...mapped, ...extra];
+}
+
 async function loadQuotesChunked(symbols: string[], chunk = 10): Promise<Record<string, FinnhubQuote | null>> {
   const uniq = [...new Set(symbols.map((s) => normalizeTickerSymbol(s)).filter(Boolean))];
   const out: Record<string, FinnhubQuote | null> = {};
@@ -96,7 +114,7 @@ export function Home() {
         if (cancelled) return;
         const mapped = rows.map(screenerRowToHotStock).filter(Boolean) as HotStock[];
         if (mapped.length > 0) {
-          setMegaStocks(mapped);
+          setMegaStocks(mergeExtraMegaStocks(mapped));
           setMegaError(null);
         } else {
           setMegaStocks(fallbackToHotStocks());

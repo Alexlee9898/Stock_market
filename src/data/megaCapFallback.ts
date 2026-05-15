@@ -10,9 +10,13 @@ export const MEGA_CAP_FALLBACK_TICKERS = [
   "NVDA",
   "AMZN",
   "META",
+  "TSLA",
   "AVGO",
   "TSM",
 ] as const;
+
+/** 筛选接口有结果时仍强制并入首页的标的（不要求满足万亿筛选） */
+export const MEGA_EXTRA_TICKERS = ["TSLA"] as const;
 
 /** 无筛选接口时的卡片展示（中英文简称 + 一句行业） */
 export const MEGA_FALLBACK_CARD_META: Record<
@@ -26,6 +30,7 @@ export const MEGA_FALLBACK_CARD_META: Record<
   NVDA: { nameZh: "英伟达", name: "NVIDIA Corporation", tagline: "AI 与数据中心算力" },
   AMZN: { nameZh: "亚马逊", name: "Amazon.com Inc.", tagline: "电商与 AWS 云" },
   META: { nameZh: "Meta", name: "Meta Platforms Inc.", tagline: "社交与元宇宙投入" },
+  TSLA: { nameZh: "特斯拉", name: "Tesla Inc.", tagline: "电动车与能源业务" },
   AVGO: { nameZh: "博通", name: "Broadcom Inc.", tagline: "半导体与基础设施软件" },
   TSM: { nameZh: "台积电", name: "Taiwan Semiconductor Manufacturing Co.", tagline: "先进制程晶圆代工" },
 };
