@@ -4,12 +4,16 @@ import { searchStockSymbols, type FinnhubSearchHit } from "../api/finnhub";
 
 const MAX_HITS = 35;
 
-export function StockSearch() {
+interface Props {
+  /** 与区块标题同一行，靠右排列（用于首页「热门美股」） */
+  inline?: boolean;
+}
+
+export function StockSearch({ inline = false }: Props) {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<FinnhubSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const blurTimer = useRef<number | null>(null);
 
@@ -24,25 +28,21 @@ export function StockSearch() {
     const term = q.trim();
     if (term.length < 1) {
       setHits([]);
-      setFetchError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    setFetchError(null);
     let cancelled = false;
     const t = window.setTimeout(() => {
       searchStockSymbols(term)
         .then((list) => {
           if (cancelled) return;
           setHits(list.slice(0, MAX_HITS));
-          setFetchError(null);
         })
-        .catch((err: unknown) => {
+        .catch(() => {
           if (cancelled) return;
           setHits([]);
-          setFetchError(err instanceof Error ? err.message : "搜索暂不可用，请稍后重试。");
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
@@ -55,7 +55,6 @@ export function StockSearch() {
     };
   }, [q]);
 
-  /** 仅允许常见美股代码形态，避免误拼长串被当成 ticker */
   const looksLikeTicker = (s: string) => /^[A-Za-z]{1,6}(\.[A-Z])?$/.test(s.trim());
 
   const goSymbol = useCallback(
@@ -73,10 +72,12 @@ export function StockSearch() {
   const showDropdown = open && (loading || hits.length > 0 || q.trim().length >= 1);
 
   return (
-    <div className="stock-search">
-      <label className="stock-search-label" htmlFor="stock-search-input">
-        搜索美股
-      </label>
+    <div className={"stock-search" + (inline ? " stock-search--inline" : "")}>
+      {!inline ? (
+        <label className="stock-search-label" htmlFor="stock-search-input">
+          搜索美股
+        </label>
+      ) : null}
       <div className="stock-search-wrap">
         <input
           id="stock-search-input"
@@ -84,7 +85,8 @@ export function StockSearch() {
           enterKeyHint="search"
           autoComplete="off"
           spellCheck={false}
-          placeholder="输入代码或公司名，如 NVDA、Bank of America…"
+          aria-label="搜索美股"
+          placeholder={inline ? "搜索代码或公司名…" : "输入代码或公司名，如 NVDA、Bank of America…"}
           className="stock-search-input"
           value={q}
           onChange={(e) => {
@@ -117,8 +119,7 @@ export function StockSearch() {
         {showDropdown ? (
           <div className="stock-search-dropdown" role="listbox" aria-label="搜索结果">
             {loading ? <div className="stock-search-status">搜索中…</div> : null}
-            {!loading && fetchError ? <div className="stock-search-status">{fetchError}</div> : null}
-            {!loading && !fetchError && hits.length === 0 && q.trim().length >= 1 ? (
+            {!loading && hits.length === 0 && q.trim().length >= 1 ? (
               <div className="stock-search-status">
                 未找到匹配结果。若你输入的是代码（如 GOOGL），可直接按 Enter 进入详情。
               </div>

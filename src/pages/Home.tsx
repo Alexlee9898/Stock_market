@@ -172,9 +172,8 @@ export function Home() {
       <section className="section">
         <div className="section-head">
           <h2 className="section-title">热门美股</h2>
+          <StockSearch inline />
         </div>
-
-        <StockSearch />
 
         {megaError ? <p className="stock-mega-hint muted">{megaError}</p> : null}
         {megaLoading ? <p className="muted">正在加载大盘股列表…</p> : null}
