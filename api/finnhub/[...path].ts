@@ -9,9 +9,15 @@ export default async function handler(request: Request): Promise<Response> {
     return new Response("Method Not Allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
   }
 
-  const token = process.env.FINNHUB_API_KEY;
+  const token = process.env.FINNHUB_API_KEY?.trim();
   if (!token) {
-    return Response.json({ error: "FINNHUB_API_KEY is not configured on the server" }, { status: 503 });
+    return Response.json(
+      {
+        error: "FINNHUB_API_KEY is not configured on the server",
+        hint: "Vercel: Project → Settings → Environment Variables → 添加 FINNHUB_API_KEY（勾选 Production），Save 后到 Deployments 对最新部署执行 Redeploy。",
+      },
+      { status: 503 },
+    );
   }
 
   const url = new URL(request.url);

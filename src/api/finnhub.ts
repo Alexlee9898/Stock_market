@@ -20,7 +20,15 @@ async function finnhubFetch(pathWithQuery: string): Promise<unknown> {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Finnhub HTTP ${res.status} ${text}`.slice(0, 200));
+    let extra = text;
+    try {
+      const j = JSON.parse(text) as { hint?: string; error?: string };
+      if (j.hint) extra = `${j.error ?? ""} — ${j.hint}`;
+      else if (j.error) extra = j.error;
+    } catch {
+      /* keep raw text */
+    }
+    throw new Error(`Finnhub HTTP ${res.status} ${extra}`.slice(0, 400));
   }
   return res.json() as Promise<unknown>;
 }
