@@ -1,6 +1,9 @@
 import { Link, NavLink } from "react-router-dom";
+import { useTheme } from "../hooks/useTheme";
 
 export function NavBar() {
+  const { theme, toggle } = useTheme();
+
   return (
     <header className="nav-shell">
       <div className="nav-inner">
@@ -21,6 +24,15 @@ export function NavBar() {
           >
             产业研究
           </NavLink>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggle}
+            aria-label={theme === "dark" ? "切换浅色模式" : "切换深色模式"}
+            title={theme === "dark" ? "切换浅色模式" : "切换深色模式"}
+          >
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
         </nav>
       </div>
     </header>
