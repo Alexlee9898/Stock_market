@@ -1,13 +1,15 @@
 import { Link, useParams } from "react-router-dom";
 import {
-  formatBillionsUsdFromFinnhubMarketCap,
+  formatMarketCapFromFinnhubMillionUsd,
   formatPercent,
   formatUsd,
   metricNumber,
   type FinnhubEpsHistoryRow,
+  type FinnhubProfile,
 } from "../api/finnhub";
 import { useStockApi } from "../hooks/useStockApi";
 import { getStockDetail } from "../data/stocks";
+import { MEGA_FALLBACK_CARD_META } from "../data/megaCapFallback";
 import type { EarningsReport, StockDetail } from "../types";
 
 export function StockDetail() {
@@ -170,6 +172,28 @@ export function StockDetail() {
   );
 }
 
+function buildIntroFromFinnhubProfile(p: FinnhubProfile | undefined): string | null {
+  if (!p?.name?.trim()) return null;
+  const lines: string[] = [];
+  const ticker = p.ticker?.trim();
+  lines.push(
+    `${p.name.trim()}${ticker && ticker !== p.name ? `（${ticker}）` : ""}为在美公开交易证券。公开数据中的行业归类：${p.finnhubIndustry ?? "—"}。`,
+  );
+  if (p.exchange || p.country) {
+    lines.push(`交易所：${p.exchange ?? "—"}${p.country ? `；注册地：${p.country}` : ""}。`);
+  }
+  if (p.ipo?.trim()) {
+    lines.push(`IPO 日期（参考）：${p.ipo.trim()}。`);
+  }
+  lines.push(
+    "以上内容由公开 profile 字段自动整理，非投资建议；战略、财务与风险请以公司 IR 页面及年报、季报（如 10-K / 10-Q、20-F）为准。",
+  );
+  if (p.weburl?.trim()) {
+    lines.push(`官网：${p.weburl.trim()}`);
+  }
+  return lines.join("\n\n");
+}
+
 function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnType<typeof useStockApi>): StockDetail {
   const q = api.quote;
   const livePrice = q && q.c > 0;
@@ -179,7 +203,7 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
 
   const mcap =
     api.profile?.marketCapitalization != null
-      ? formatBillionsUsdFromFinnhubMarketCap(api.profile.marketCapitalization)
+      ? formatMarketCapFromFinnhubMillionUsd(api.profile.marketCapitalization)
       : base?.marketCapDisplay ?? "—";
 
   const peRaw =
@@ -199,12 +223,15 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
   const week52High = h52 != null ? h52.toFixed(2) : base?.week52High ?? "—";
   const week52Low = l52 != null ? l52.toFixed(2) : base?.week52Low ?? "—";
 
-  const name = base?.name ?? api.profile?.name ?? symbol;
-  const nameZh = base?.nameZh ?? api.profile?.name ?? symbol;
+  const symKey = symbol.trim().toUpperCase();
+  const nameHint = MEGA_FALLBACK_CARD_META[symKey];
+  const name = base?.name ?? nameHint?.name ?? api.profile?.name ?? symbol;
+  const nameZh = base?.nameZh ?? nameHint?.nameZh ?? api.profile?.name ?? symbol;
   const sector = base?.sector ?? (api.profile?.finnhubIndustry ? `${api.profile.finnhubIndustry}（公开分类）` : "—");
   const description =
     base?.description ??
-    `行业分类：${api.profile?.finnhubIndustry ?? "—"}。暂无中文长简介；请结合官网披露与研报阅读。`;
+    buildIntroFromFinnhubProfile(api.profile ?? undefined) ??
+    `行业分类：${api.profile?.finnhubIndustry ?? "—"}。暂无公开简介字段；请结合官网披露与研报阅读。`;
 
   const latest = pickLatestEps(api.epsHistory);
   const latestEarnings: EarningsReport = base

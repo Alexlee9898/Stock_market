@@ -340,10 +340,20 @@ export function formatPercent(n: number, digits = 2) {
   return `${sign}${n.toFixed(digits)}%`;
 }
 
-export function formatBillionsUsdFromFinnhubMarketCap(billions: number | undefined) {
-  if (billions == null || Number.isNaN(billions)) return "—";
-  if (billions >= 1000) return `约 ${(billions / 1000).toFixed(2)} 万亿美元`;
-  return `约 ${billions.toFixed(1)} 亿美元`;
+export function formatBillionsUsdFromFinnhubMarketCap(billionsUsd: number | undefined) {
+  if (billionsUsd == null || Number.isNaN(billionsUsd)) return "—";
+  if (billionsUsd >= 1000) return `约 ${(billionsUsd / 1000).toFixed(2)} 万亿美元`;
+  return `约 ${billionsUsd.toFixed(1)} 亿美元`;
+}
+
+/**
+ * Finnhub `profile2` / 股票筛选等字段里的 `marketCapitalization` 单位为「百万美元」。
+ * 先换算为十亿美元再交给 `formatBillionsUsdFromFinnhubMarketCap` 格式化为中文。
+ */
+export function formatMarketCapFromFinnhubMillionUsd(millionUsd: number | undefined): string {
+  if (millionUsd == null || Number.isNaN(millionUsd)) return "—";
+  const billionsUsd = millionUsd / 1000;
+  return formatBillionsUsdFromFinnhubMarketCap(billionsUsd);
 }
 
 export function metricNumber(m: FinnhubMetric | undefined, key: string): number | undefined {

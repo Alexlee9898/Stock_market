@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { FinnhubQuote, FinnhubScreenerRow } from "../api/finnhub";
 import {
   getQuote,
+  formatMarketCapFromFinnhubMillionUsd,
   normalizeTickerSymbol,
   quoteHasDisplayablePrice,
   screenUsStocksByMarketCapMinBillion,
 } from "../api/finnhub";
 import { StockCard } from "../components/StockCard";
 import { StockSearch } from "../components/StockSearch";
-import { MEGA_CAP_FALLBACK_TICKERS } from "../data/megaCapFallback";
+import { MEGA_CAP_FALLBACK_TICKERS, MEGA_FALLBACK_CARD_META } from "../data/megaCapFallback";
 import type { HotStock } from "../types";
 import { accentFromSymbol } from "../utils/symbolAccent";
 
@@ -19,10 +20,20 @@ function screenerRowToHotStock(row: FinnhubScreenerRow): HotStock | null {
   const symbol = normalizeTickerSymbol(row.symbol);
   if (!symbol) return null;
   const name = (row.description ?? row.name ?? symbol).trim() || symbol;
+  const mcap =
+    row.marketCapitalization != null && Number.isFinite(row.marketCapitalization)
+      ? formatMarketCapFromFinnhubMillionUsd(row.marketCapitalization)
+      : null;
+  const industry =
+    typeof row.finnhubIndustry === "string" && row.finnhubIndustry.trim() ? row.finnhubIndustry.trim() : "";
   const tagline =
-    typeof row.finnhubIndustry === "string" && row.finnhubIndustry.trim()
-      ? `${row.finnhubIndustry.trim()} · 美股`
-      : "美股 · 总市值 ≥ 1 万亿美元";
+    mcap && mcap !== "—"
+      ? industry
+        ? `${mcap} · ${industry}`
+        : `${mcap} · 美股`
+      : industry
+        ? `${industry} · 美股`
+        : "美股 · 总市值 ≥ 1 万亿美元";
   return {
     symbol,
     name,
@@ -33,13 +44,16 @@ function screenerRowToHotStock(row: FinnhubScreenerRow): HotStock | null {
 }
 
 function fallbackToHotStocks(): HotStock[] {
-  return MEGA_CAP_FALLBACK_TICKERS.map((symbol) => ({
-    symbol,
-    name: symbol,
-    nameZh: symbol,
-    tagline: "美股 · 离线备选名单（筛选接口不可用或暂无数据）",
-    accent: accentFromSymbol(symbol),
-  }));
+  return MEGA_CAP_FALLBACK_TICKERS.map((symbol) => {
+    const meta = MEGA_FALLBACK_CARD_META[symbol];
+    return {
+      symbol,
+      name: meta?.name ?? symbol,
+      nameZh: meta?.nameZh ?? symbol,
+      tagline: meta?.tagline ?? "美股 · 市值筛选暂不可用（以下为常见万亿市值标的）",
+      accent: accentFromSymbol(symbol),
+    };
+  });
 }
 
 function sortMegaCaps(rows: FinnhubScreenerRow[]): FinnhubScreenerRow[] {
