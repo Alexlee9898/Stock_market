@@ -242,7 +242,7 @@ function parseScreenerRows(data: unknown): FinnhubScreenerRow[] {
 
 /**
  * 美股市值筛选（Finnhub 筛选条件中市值单位为「百万美元」）。
- * @param minBillionUsd 最低市值，单位：十亿美元（例如 200 表示 2000 亿美元）
+ * @param minBillionUsd 最低市值，单位：十亿美元（例如 1000 表示 1 万亿美元）
  */
 export async function screenUsStocksByMarketCapMinBillion(minBillionUsd: number): Promise<FinnhubScreenerRow[]> {
   const minMillionUsd = minBillionUsd * 1000;
@@ -254,20 +254,81 @@ export async function screenUsStocksByMarketCapMinBillion(minBillionUsd: number)
   return parseScreenerRows(alt);
 }
 
-/** 全市场符号搜索（结果需自行过滤为美股普通股等） */
+function unwrapSearchResults(data: unknown): FinnhubSearchHit[] {
+  if (!data || typeof data !== "object") return [];
+  if (Array.isArray(data)) return data as FinnhubSearchHit[];
+  const o = data as { result?: unknown };
+  if (!Array.isArray(o.result)) return [];
+  return o.result as FinnhubSearchHit[];
+}
+
+function filterSearchHits(raw: FinnhubSearchHit[]): FinnhubSearchHit[] {
+  return raw.filter((r) => {
+    const sym = normalizeTickerSymbol(r.symbol);
+    if (!sym || sym.length > 12) return false;
+    const t = (r.type ?? "").toLowerCase();
+    if (t.includes("etf") || t.includes("fund") || t.includes("warrant") || t.includes("crypto")) return false;
+    const cur = (r.currency ?? "").toUpperCase();
+    if (cur && cur !== "USD") return false;
+    if (
+      t.includes("common") ||
+      t.includes("adr") ||
+      t.includes("stock") ||
+      t.includes("share") ||
+      t.includes("equity")
+    ) {
+      return true;
+    }
+    if ((cur === "" || cur === "USD") && /^[A-Z][A-Z0-9.]{0,9}$/.test(sym)) return true;
+    return false;
+  });
+}
+
+/**
+ * 全市场符号搜索：并行请求 `/search` 与 `/stock/symbol-search`，合并去重（提高可用性）。
+ */
 export async function searchStockSymbols(query: string): Promise<FinnhubSearchHit[]> {
   const q = query.trim();
   if (q.length < 1) return [];
-  const data = (await finnhubFetch(`search?q=${encodeURIComponent(q)}`)) as { result?: FinnhubSearchHit[] };
-  const raw = data.result ?? [];
-  return raw.filter((r) => {
-    const sym = r.symbol?.trim();
-    if (!sym || sym.includes(":")) return false;
-    const t = (r.type ?? "").toLowerCase();
-    if (!t.includes("common") && !t.includes("adr")) return false;
-    const cur = (r.currency ?? "USD").toUpperCase();
-    return cur === "USD";
-  });
+
+  const enc = encodeURIComponent(q);
+  const [resA, resB] = await Promise.allSettled([
+    finnhubFetch(`search?q=${enc}`),
+    finnhubFetch(`stock/symbol-search?q=${enc}&exchange=US`),
+  ]);
+
+  const a = resA.status === "fulfilled" ? unwrapSearchResults(resA.value) : [];
+  const b = resB.status === "fulfilled" ? unwrapSearchResults(resB.value) : [];
+
+  const bySym = new Map<string, FinnhubSearchHit>();
+  for (const row of [...a, ...b]) {
+    const k = normalizeTickerSymbol(row.symbol);
+    if (!k) continue;
+    if (!bySym.has(k)) {
+      bySym.set(k, { ...row, symbol: k, displaySymbol: row.displaySymbol ?? k });
+    }
+  }
+
+  const merged = [...bySym.values()];
+  const filtered = filterSearchHits(merged);
+  const seen = new Set<string>();
+  const out: FinnhubSearchHit[] = [];
+  for (const hit of filtered) {
+    const k = normalizeTickerSymbol(hit.symbol);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push({
+      ...hit,
+      symbol: k,
+      displaySymbol: hit.displaySymbol ?? k,
+    });
+  }
+
+  if (out.length === 0 && resA.status === "rejected" && resB.status === "rejected") {
+    const r = resA.reason;
+    throw r instanceof Error ? r : new Error("搜索请求失败");
+  }
+  return out;
 }
 
 export function formatUsd(n: number, digits = 2) {

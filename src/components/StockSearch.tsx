@@ -9,6 +9,7 @@ export function StockSearch() {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<FinnhubSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const blurTimer = useRef<number | null>(null);
 
@@ -23,21 +24,25 @@ export function StockSearch() {
     const term = q.trim();
     if (term.length < 1) {
       setHits([]);
+      setFetchError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setFetchError(null);
     let cancelled = false;
     const t = window.setTimeout(() => {
       searchStockSymbols(term)
         .then((list) => {
           if (cancelled) return;
           setHits(list.slice(0, MAX_HITS));
+          setFetchError(null);
         })
-        .catch(() => {
+        .catch((err: unknown) => {
           if (cancelled) return;
           setHits([]);
+          setFetchError(err instanceof Error ? err.message : "搜索暂不可用，请稍后重试。");
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
@@ -50,9 +55,11 @@ export function StockSearch() {
     };
   }, [q]);
 
+  const looksLikeTicker = (s: string) => /^[A-Za-z][A-Za-z0-9.]{0,9}$/.test(s.trim());
+
   const goSymbol = useCallback(
     (sym: string) => {
-      const s = sym.trim();
+      const s = sym.trim().toUpperCase();
       if (!s) return;
       navigate(`/stock/${encodeURIComponent(s)}`);
       setQ("");
@@ -94,17 +101,26 @@ export function StockSearch() {
             if (e.key === "Escape") {
               setOpen(false);
             }
-            if (e.key === "Enter" && hits[0]?.symbol) {
-              e.preventDefault();
-              goSymbol(hits[0].symbol);
+            if (e.key === "Enter") {
+              const t = q.trim();
+              if (hits[0]?.symbol) {
+                e.preventDefault();
+                goSymbol(hits[0].symbol);
+              } else if (looksLikeTicker(t)) {
+                e.preventDefault();
+                goSymbol(t.toUpperCase());
+              }
             }
           }}
         />
         {showDropdown ? (
           <div className="stock-search-dropdown" role="listbox" aria-label="搜索结果">
             {loading ? <div className="stock-search-status">搜索中…</div> : null}
-            {!loading && hits.length === 0 && q.trim().length >= 1 ? (
-              <div className="stock-search-status">未找到匹配的美股普通股 / ADR，请换关键词试试。</div>
+            {!loading && fetchError ? <div className="stock-search-status">{fetchError}</div> : null}
+            {!loading && !fetchError && hits.length === 0 && q.trim().length >= 1 ? (
+              <div className="stock-search-status">
+                未找到匹配结果。若你输入的是代码（如 GOOGL），可直接按 Enter 进入详情。
+              </div>
             ) : null}
             <ul className="stock-search-list">
               {hits.map((h) => {

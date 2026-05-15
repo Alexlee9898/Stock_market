@@ -12,7 +12,8 @@ import { MEGA_CAP_FALLBACK_TICKERS } from "../data/megaCapFallback";
 import type { HotStock } from "../types";
 import { accentFromSymbol } from "../utils/symbolAccent";
 
-const MEGA_MIN_BILLION = 200;
+/** 1 万亿美元 = 1000 「十亿美元」档位，与 screenUsStocksByMarketCapMinBillion 参数一致 */
+const MEGA_MIN_BILLION = 1000;
 
 function screenerRowToHotStock(row: FinnhubScreenerRow): HotStock | null {
   const symbol = normalizeTickerSymbol(row.symbol);
@@ -21,7 +22,7 @@ function screenerRowToHotStock(row: FinnhubScreenerRow): HotStock | null {
   const tagline =
     typeof row.finnhubIndustry === "string" && row.finnhubIndustry.trim()
       ? `${row.finnhubIndustry.trim()} · 美股`
-      : "美股 · 总市值 ≥ 2000 亿美元";
+      : "美股 · 总市值 ≥ 1 万亿美元";
   return {
     symbol,
     name,
@@ -85,7 +86,7 @@ export function Home() {
           setMegaError(null);
         } else {
           setMegaStocks(fallbackToHotStocks());
-          setMegaError("筛选结果为空，已展示备选大盘股名单。");
+          setMegaError("筛选结果为空，已展示备选名单（约 1 万亿美元市值公司）。");
         }
       } catch (e) {
         if (cancelled) return;
