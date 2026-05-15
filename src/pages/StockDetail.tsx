@@ -1,15 +1,19 @@
 import { Link, useParams } from "react-router-dom";
 import {
+  computeRevenueYoyPercent,
   formatMarketCapResolved,
   formatPercent,
   formatUsd,
   metricDividendYieldFraction,
+  metricMarginPercent,
   metricNumber,
   metricPeTtmBest,
   revenueActualToBillionsUsd,
   safe52WeekHighLow,
   type FinnhubEpsHistoryRow,
+  type FinnhubMetric,
   type FinnhubProfile,
+  type ParsedQuarterFinancials,
 } from "../api/finnhub";
 import { useStockApi } from "../hooks/useStockApi";
 import { getStockDetail } from "../data/stocks";
@@ -115,18 +119,41 @@ export function StockDetail() {
 
       <section className="panel panel--earnings">
         <div className="earnings-head">
-          <h2 className="panel-title">财报与 EPS</h2>
+          <h2 className="panel-title">最新财报摘要</h2>
           <span className="pill pill--earnings">{e.quarter}</span>
         </div>
-        <p className="earnings-meta">报告期参考：{e.reportDate}</p>
+        <p className="earnings-meta">报告期：{e.reportDate}</p>
         <div className="earnings-stats">
           <div className="earnings-stat">
-            <span className="earnings-label">营收（公开接口）</span>
-            <strong>{e.revenueBillions > 0 ? `${e.revenueBillions.toFixed(1)}B 美元` : "—"}</strong>
+            <span className="earnings-label">单季营收</span>
+            <strong>{formatBillions(e.revenueBillions)}</strong>
             <span className="earnings-sub">
-              {e.revenueYoyPercent !== 0
-                ? `同比 ${e.revenueYoyPercent >= 0 ? "+" : ""}${e.revenueYoyPercent.toFixed(1)}%`
-                : "同比数据见公司完整财报"}
+              {e.revenueEstimateBillions != null
+                ? `预期 ${formatBillions(e.revenueEstimateBillions)}`
+                : e.revenueYoyPercent !== 0
+                  ? `同比 ${formatSignedPercent(e.revenueYoyPercent)}`
+                  : "同比见公司正式披露"}
+            </span>
+          </div>
+          <div className="earnings-stat">
+            <span className="earnings-label">毛利率</span>
+            <strong>{formatMargin(e.grossMarginPercent)}</strong>
+            <span className="earnings-sub">
+              {e.grossProfitBillions != null ? `毛利润 ${formatBillions(e.grossProfitBillions)}` : "—"}
+            </span>
+          </div>
+          <div className="earnings-stat">
+            <span className="earnings-label">营业利润率</span>
+            <strong>{formatMargin(e.operatingMarginPercent)}</strong>
+            <span className="earnings-sub">
+              {e.operatingIncomeBillions != null ? `营业利润 ${formatBillions(e.operatingIncomeBillions)}` : "—"}
+            </span>
+          </div>
+          <div className="earnings-stat">
+            <span className="earnings-label">净利率</span>
+            <strong>{formatMargin(e.netMarginPercent)}</strong>
+            <span className="earnings-sub">
+              {e.netIncomeBillions != null ? `净利润 ${formatBillions(e.netIncomeBillions)}` : "—"}
             </span>
           </div>
           <div className="earnings-stat">
@@ -139,6 +166,7 @@ export function StockDetail() {
             {beat === false ? <span className="badge badge--warn">低于预期</span> : null}
           </div>
         </div>
+        {e.marginsAreTtm ? <p className="earnings-note">注：部分利润率取自滚动四季（TTM）口径，单季利润表缺失时使用。</p> : null}
         <p className="panel-prose earnings-summary">{e.summary}</p>
       </section>
 
@@ -232,43 +260,12 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
     buildIntroFromFinnhubProfile(api.profile ?? undefined) ??
     `行业分类：${api.profile?.finnhubIndustry ?? "—"}。暂无公开简介字段；请结合官网披露与研报阅读。`;
 
-  const latest = pickLatestEps(api.epsHistory);
-  const revB = revenueActualToBillionsUsd(latest?.revenueActual);
-  const revLine =
-    revB != null
-      ? `单季营收约 ${revB.toFixed(2)}B 美元（来自公开 earnings 的 revenueActual，单位已按常见口径估算，以公司正式财报为准）。`
-      : "";
-  const latestEarnings: EarningsReport = base
-    ? {
-        ...base.latestEarnings,
-        ...(latest
-          ? {
-              quarter: `${latest.year} Q${latest.quarter}`,
-              fiscalYear: latest.year ?? base.latestEarnings.fiscalYear,
-              epsActual: latest.actual ?? undefined,
-              epsEstimate: latest.estimate ?? undefined,
-              reportDate: latest.period ?? base.latestEarnings.reportDate,
-              ...(revB != null
-                ? {
-                    revenueBillions: revB,
-                    summary: revLine + (base.latestEarnings.summary?.trim() ? ` ${base.latestEarnings.summary}` : ""),
-                  }
-                : {}),
-            }
-          : {}),
-      }
-    : {
-        quarter: latest ? `${latest.year} Q${latest.quarter}` : "最近一季",
-        fiscalYear: latest?.year ?? new Date().getFullYear(),
-        epsActual: latest?.actual ?? undefined,
-        epsEstimate: latest?.estimate ?? undefined,
-        revenueBillions: revB ?? 0,
-        revenueYoyPercent: 0,
-        summary: [revLine, "EPS 与一致预期对比如上；营收同比及其他口径请查阅 10-Q / press release。"]
-          .filter(Boolean)
-          .join(""),
-        reportDate: latest?.period ?? "—",
-      };
+  const latestEarnings = mergeEarningsReport(
+    base?.latestEarnings,
+    pickLatestEps(api.epsHistory),
+    api.incomeQuarters,
+    api.metric ?? undefined,
+  );
 
   return {
     symbol: base?.symbol ?? api.profile?.ticker ?? symbol,
@@ -286,6 +283,102 @@ function mergeDetail(base: StockDetail | undefined, symbol: string, api: ReturnT
     latestEarnings,
     highlights: base?.highlights ?? [],
     riskNotes: base?.riskNotes ?? [],
+  };
+}
+
+function formatBillions(b: number | undefined): string {
+  if (b == null || !Number.isFinite(b) || b <= 0) return "—";
+  return `${b.toFixed(b >= 10 ? 1 : 2)}B 美元`;
+}
+
+function formatMargin(p: number | undefined): string {
+  if (p == null || !Number.isFinite(p)) return "—";
+  return `${p.toFixed(1)}%`;
+}
+
+function formatSignedPercent(p: number): string {
+  const sign = p > 0 ? "+" : "";
+  return `${sign}${p.toFixed(1)}%`;
+}
+
+function mergeEarningsReport(
+  base: EarningsReport | undefined,
+  latestEps: FinnhubEpsHistoryRow | undefined,
+  incomeQuarters: ParsedQuarterFinancials[],
+  metric: FinnhubMetric | undefined,
+): EarningsReport {
+  const ic = incomeQuarters[0];
+  const revFromEps = revenueActualToBillionsUsd(latestEps?.revenueActual);
+  const revEstFromEps = revenueActualToBillionsUsd(latestEps?.revenueEstimate);
+
+  const revenueBillions =
+    ic?.revenueBillions ?? revFromEps ?? (base?.revenueBillions && base.revenueBillions > 0 ? base.revenueBillions : 0);
+
+  const yoyFromIc =
+    ic && incomeQuarters.length > 1 ? computeRevenueYoyPercent(ic, incomeQuarters) : undefined;
+
+  const grossMarginQuarter = ic?.grossMarginPercent;
+  const opMarginQuarter = ic?.operatingMarginPercent;
+  const netMarginQuarter = ic?.netMarginPercent;
+
+  const grossTtm = metricMarginPercent(metric, ["grossMarginTTM", "grossMarginAnnual"]);
+  const opTtm = metricMarginPercent(metric, ["operatingMarginTTM", "operatingMarginAnnual", "ebitMarginTTM"]);
+  const netTtm = metricMarginPercent(metric, ["netProfitMarginTTM", "netMarginAnnual", "netProfitMarginAnnual"]);
+
+  const grossMarginPercent = grossMarginQuarter ?? grossTtm ?? base?.grossMarginPercent;
+  const operatingMarginPercent = opMarginQuarter ?? opTtm ?? base?.operatingMarginPercent;
+  const netMarginPercent = netMarginQuarter ?? netTtm ?? base?.netMarginPercent;
+  const marginsAreTtm =
+    grossMarginQuarter == null && opMarginQuarter == null && netMarginQuarter == null && (grossTtm != null || opTtm != null || netTtm != null);
+
+  const quarterLabel = latestEps?.year != null && latestEps.quarter != null
+    ? `${latestEps.year} Q${latestEps.quarter}`
+    : ic?.period
+      ? `截至 ${ic.period.slice(0, 10)}`
+      : base?.quarter ?? "最近一季";
+
+  const reportDate = ic?.period?.slice(0, 10) ?? latestEps?.period?.slice(0, 10) ?? base?.reportDate ?? "—";
+
+  const summaryParts: string[] = [];
+  if (ic) {
+    summaryParts.push(
+      `最近一季利润表（截至 ${ic.period.slice(0, 10)}）：营收 ${formatBillions(ic.revenueBillions)}` +
+        (grossMarginQuarter != null ? `，毛利率 ${formatMargin(grossMarginQuarter)}` : "") +
+        (opMarginQuarter != null ? `，营业利润率 ${formatMargin(opMarginQuarter)}` : "") +
+        "。",
+    );
+  } else if (revFromEps != null) {
+    summaryParts.push(`单季营收约 ${revFromEps.toFixed(2)}B 美元（来自 earnings 接口，以公司正式财报为准）。`);
+  }
+  if (latestEps?.actual != null) {
+    summaryParts.push(
+      latestEps.estimate != null
+        ? `EPS 实际 ${latestEps.actual.toFixed(2)}，一致预期 ${latestEps.estimate.toFixed(2)}。`
+        : `EPS 实际 ${latestEps.actual.toFixed(2)}。`,
+    );
+  }
+  if (base?.summary?.trim() && !ic) summaryParts.push(base.summary.trim());
+
+  return {
+    quarter: quarterLabel,
+    fiscalYear: latestEps?.year ?? base?.fiscalYear ?? new Date().getFullYear(),
+    epsActual: latestEps?.actual ?? base?.epsActual,
+    epsEstimate: latestEps?.estimate ?? base?.epsEstimate,
+    revenueBillions,
+    revenueYoyPercent: yoyFromIc ?? base?.revenueYoyPercent ?? 0,
+    revenueEstimateBillions: revEstFromEps ?? base?.revenueEstimateBillions,
+    grossMarginPercent,
+    operatingMarginPercent,
+    netMarginPercent,
+    grossProfitBillions: ic?.grossProfitBillions ?? base?.grossProfitBillions,
+    operatingIncomeBillions: ic?.operatingIncomeBillions ?? base?.operatingIncomeBillions,
+    netIncomeBillions: ic?.netIncomeBillions ?? base?.netIncomeBillions,
+    marginsAreTtm: marginsAreTtm || undefined,
+    summary:
+      summaryParts.join(" ") ||
+      base?.summary ||
+      "完整口径请查阅公司 IR 发布的季报、年报（10-Q / 10-K）及业绩说明会材料。",
+    reportDate,
   };
 }
 

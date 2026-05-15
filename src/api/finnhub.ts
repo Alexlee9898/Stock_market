@@ -438,3 +438,117 @@ export function revenueActualToBillionsUsd(revenue: number | null | undefined): 
   if (revenue >= 1e8) return revenue / 1e9;
   return revenue / 1000;
 }
+
+/** 标准化利润表单季（已换算为十亿美元） */
+export interface ParsedQuarterFinancials {
+  period: string;
+  revenueBillions: number;
+  grossProfitBillions?: number;
+  operatingIncomeBillions?: number;
+  netIncomeBillions?: number;
+  grossMarginPercent?: number;
+  operatingMarginPercent?: number;
+  netMarginPercent?: number;
+}
+
+const IC_REVENUE_KEYS = ["revenue", "totalRevenue", "salesRevenue", "revenues"];
+const IC_GROSS_KEYS = ["grossProfit", "grossIncome"];
+const IC_OPERATING_KEYS = ["operatingIncome", "operatingIncomeLoss", "ebit", "operatingProfit"];
+const IC_NET_KEYS = ["netIncome", "netIncomeLoss", "netIncomeApplicableToCommonShares"];
+
+function icRowAmount(row: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const k of keys) {
+    const v = row[k];
+    if (typeof v === "number" && Number.isFinite(v) && v !== 0) return v;
+  }
+  return undefined;
+}
+
+/** 标准化利润表金额 → 十亿美元（≥1e8 视为美元，否则视为百万美元） */
+export function financialAmountToBillionsUsd(amount: number | undefined): number | undefined {
+  if (amount == null || !Number.isFinite(amount) || amount <= 0) return undefined;
+  if (amount >= 1e8) return amount / 1e9;
+  return amount / 1000;
+}
+
+function marginFromParts(numerator: number | undefined, revenue: number | undefined): number | undefined {
+  if (numerator == null || revenue == null || revenue <= 0) return undefined;
+  return (numerator / revenue) * 100;
+}
+
+export function parseIncomeStatementFinancials(data: unknown): ParsedQuarterFinancials[] {
+  const rows = Array.isArray((data as { financials?: unknown })?.financials)
+    ? ((data as { financials: unknown[] }).financials ?? [])
+    : [];
+  const out: ParsedQuarterFinancials[] = [];
+
+  for (const raw of rows) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const period = typeof r.period === "string" ? r.period.trim() : "";
+    const revRaw = icRowAmount(r, IC_REVENUE_KEYS);
+    if (!period || revRaw == null || revRaw <= 0) continue;
+
+    const revenueBillions = financialAmountToBillionsUsd(revRaw);
+    if (revenueBillions == null) continue;
+
+    const gpRaw = icRowAmount(r, IC_GROSS_KEYS);
+    const oiRaw = icRowAmount(r, IC_OPERATING_KEYS);
+    const niRaw = icRowAmount(r, IC_NET_KEYS);
+
+    out.push({
+      period,
+      revenueBillions,
+      grossProfitBillions: financialAmountToBillionsUsd(gpRaw),
+      operatingIncomeBillions: financialAmountToBillionsUsd(oiRaw),
+      netIncomeBillions: financialAmountToBillionsUsd(niRaw),
+      grossMarginPercent: marginFromParts(gpRaw, revRaw),
+      operatingMarginPercent: marginFromParts(oiRaw, revRaw),
+      netMarginPercent: marginFromParts(niRaw, revRaw),
+    });
+  }
+
+  out.sort((a, b) => b.period.localeCompare(a.period));
+  return out;
+}
+
+export function computeRevenueYoyPercent(
+  latest: ParsedQuarterFinancials,
+  all: ParsedQuarterFinancials[],
+): number | undefined {
+  const t = Date.parse(latest.period.slice(0, 10));
+  if (Number.isNaN(t)) return undefined;
+  const target = t - 365.25 * 86400000;
+  let prior: ParsedQuarterFinancials | undefined;
+  let bestDiff = Infinity;
+  for (const q of all) {
+    if (q.period === latest.period) continue;
+    const qt = Date.parse(q.period.slice(0, 10));
+    if (Number.isNaN(qt)) continue;
+    const diff = Math.abs(qt - target);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      prior = q;
+    }
+  }
+  if (!prior || bestDiff > 50 * 86400000 || prior.revenueBillions <= 0) return undefined;
+  return ((latest.revenueBillions - prior.revenueBillions) / prior.revenueBillions) * 100;
+}
+
+/** metric 中的利润率：可能是 0–1 小数或已为百分数 */
+export function metricMarginPercent(m: FinnhubMetric | undefined, keys: string[]): number | undefined {
+  for (const k of keys) {
+    const v = metricNumber(m, k);
+    if (v == null || !Number.isFinite(v)) continue;
+    if (v > 0 && v <= 1) return v * 100;
+    if (v > 1 && v <= 100) return v;
+  }
+  return undefined;
+}
+
+export async function getIncomeStatementQuarterly(symbol: string): Promise<ParsedQuarterFinancials[]> {
+  const data = await finnhubFetch(
+    `/stock/financials?symbol=${encodeURIComponent(symbol)}&statement=ic&freq=quarterly`,
+  );
+  return parseIncomeStatementFinancials(data);
+}

@@ -17,6 +17,16 @@ export interface EarningsReport {
   epsEstimate?: number;
   revenueBillions: number;
   revenueYoyPercent: number;
+  /** 一致预期营收（十亿美元） */
+  revenueEstimateBillions?: number;
+  grossMarginPercent?: number;
+  operatingMarginPercent?: number;
+  netMarginPercent?: number;
+  grossProfitBillions?: number;
+  operatingIncomeBillions?: number;
+  netIncomeBillions?: number;
+  /** 利润率是否来自滚动四季（metric）而非单季利润表 */
+  marginsAreTtm?: boolean;
   summary: string;
   reportDate: string;
 }
