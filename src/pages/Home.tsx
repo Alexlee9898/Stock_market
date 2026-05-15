@@ -99,14 +99,12 @@ export function Home() {
   const quoteFetchGen = useRef(0);
   const [megaStocks, setMegaStocks] = useState<HotStock[]>([]);
   const [megaLoading, setMegaLoading] = useState(true);
-  const [megaError, setMegaError] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<Record<string, FinnhubQuote | null>>({});
   const [quotesLoading, setQuotesLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setMegaLoading(true);
-    setMegaError(null);
 
     (async () => {
       try {
@@ -115,15 +113,12 @@ export function Home() {
         const mapped = rows.map(screenerRowToHotStock).filter(Boolean) as HotStock[];
         if (mapped.length > 0) {
           setMegaStocks(mergeExtraMegaStocks(mapped));
-          setMegaError(null);
         } else {
           setMegaStocks(fallbackToHotStocks());
-          setMegaError("筛选结果为空，已展示备选名单（约 1 万亿美元市值公司）。");
         }
-      } catch (e) {
+      } catch {
         if (cancelled) return;
         setMegaStocks(fallbackToHotStocks());
-        setMegaError(e instanceof Error ? e.message : "加载市值筛选失败");
       } finally {
         if (!cancelled) setMegaLoading(false);
       }
@@ -175,7 +170,6 @@ export function Home() {
           <StockSearch inline />
         </div>
 
-        {megaError ? <p className="stock-mega-hint muted">{megaError}</p> : null}
         {megaLoading ? <p className="muted">正在加载大盘股列表…</p> : null}
 
         <div className="stock-grid">
