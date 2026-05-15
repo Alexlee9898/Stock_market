@@ -72,3 +72,27 @@ export interface IndustryTheme {
   picks: IndustryPick[];
 }
 
+export type ResearchRating = "买入" | "增持" | "中性" | "减持" | "卖出";
+
+export interface ResearchReport {
+  id: string;
+  /** 机构名称 */
+  firm: string;
+  /** 机构英文缩写 */
+  firmCode: string;
+  /** 研报标题 */
+  title: string;
+  /** 目标股票代码 */
+  symbol: string;
+  /** 目标公司中文名 */
+  nameZh: string;
+  /** 评级 */
+  rating: ResearchRating;
+  /** 目标价（美元） */
+  targetPrice?: number;
+  /** 研报摘要 */
+  summary: string;
+  /** 发布日期 */
+  date: string;
+}
+

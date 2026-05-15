@@ -5,6 +5,7 @@ import { Home } from "./pages/Home";
 import { CalendarPage } from "./pages/CalendarPage";
 import { IndustryPage } from "./pages/IndustryPage";
 import { StockDetail } from "./pages/StockDetail";
+import { ResearchPage } from "./pages/ResearchPage";
 
 export default function App() {
   return (
@@ -17,9 +18,10 @@ export default function App() {
           <Route path="/industries" element={<Navigate to={`/industries/${defaultIndustrySlug}`} replace />} />
           <Route path="/industries/:industrySlug" element={<IndustryPage />} />
           <Route path="/stock/:symbol" element={<StockDetail />} />
+          <Route path="/research" element={<ResearchPage />} />
         </Routes>
         <footer className="site-footer">
-          <p>US MARKET LEARN · TERMINAL UI v1 · 教育演示，非投资建议</p>
+          <p>US MARKET LEARN · TERMINAL UI v1 · 非投资建议</p>
         </footer>
       </div>
     </BrowserRouter>

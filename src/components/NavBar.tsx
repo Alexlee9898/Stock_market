@@ -24,6 +24,12 @@ export function NavBar() {
           >
             产业研究
           </NavLink>
+          <NavLink
+            to="/research"
+            className={({ isActive }) => "nav-link" + (isActive ? " nav-link--active" : "")}
+          >
+            研报
+          </NavLink>
           <button
             type="button"
             className="theme-toggle"
