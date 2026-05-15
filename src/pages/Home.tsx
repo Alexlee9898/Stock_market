@@ -129,9 +129,6 @@ export function Home() {
       <section className="section">
         <div className="section-head">
           <h2 className="section-title">热门美股</h2>
-          <p className="section-desc">
-            展示总市值不低于 2000 亿美元的美股公司；下方搜索可查找任意美股代码并进入详情（数据来自公开行情接口）。
-          </p>
         </div>
 
         <StockSearch />

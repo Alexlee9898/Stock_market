@@ -21,7 +21,7 @@ async function finnhubFetch(pathWithQuery: string): Promise<unknown> {
   const res = await fetch(`${PREFIX}?${params.toString()}`);
   const ct = res.headers.get("content-type") ?? "";
   if (ct.includes("text/html")) {
-    throw new Error("行情代理返回了 HTML 而非 JSON，请检查部署配置中的 /api 路由是否被误指向首页。");
+    throw new Error("数据暂不可用，请稍后重试。");
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -49,7 +49,7 @@ async function finnhubPostJson(subPath: string, body: Record<string, unknown>): 
   });
   const ct = res.headers.get("content-type") ?? "";
   if (ct.includes("text/html")) {
-    throw new Error("行情代理返回了 HTML 而非 JSON，请检查部署配置中的 /api 路由是否被误指向首页。");
+    throw new Error("数据暂不可用，请稍后重试。");
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
