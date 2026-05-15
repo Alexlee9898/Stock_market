@@ -14,6 +14,10 @@ const PREFIX = "/api/finnhub";
 async function finnhubFetch(pathWithQuery: string): Promise<unknown> {
   const path = pathWithQuery.startsWith("/") ? pathWithQuery : `/${pathWithQuery}`;
   const res = await fetch(`${PREFIX}${path}`);
+  const ct = res.headers.get("content-type") ?? "";
+  if (ct.includes("text/html")) {
+    throw new Error("Finnhub 代理返回了 HTML 而非 JSON，多为部署里 /api 被错误重写到首页；请检查 vercel.json 是否排除 /api。");
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`Finnhub HTTP ${res.status} ${text}`.slice(0, 200));
