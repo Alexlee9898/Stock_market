@@ -94,5 +94,7 @@ export interface ResearchReport {
   summary: string;
   /** 发布日期 */
   date: string;
+  /** 研报来源链接 */
+  sourceUrl: string;
 }
 

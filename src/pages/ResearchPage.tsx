@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { researchFirms, researchReports } from "../data/research";
 import type { ResearchRating } from "../types";
 
@@ -13,10 +12,6 @@ const ratingClass: Record<ResearchRating, string> = {
   减持: "rating--reduce",
   卖出: "rating--sell",
 };
-
-function formatDate(d: string) {
-  return d.replace(/-/g, "/").slice(5);
-}
 
 export function ResearchPage() {
   const [firm, setFirm] = useState<FirmFilter>("all");
@@ -57,7 +52,7 @@ export function ResearchPage() {
         <p className="hero-eyebrow">Institutional Research</p>
         <h1 className="hero-title">机构研报</h1>
         <p className="hero-sub">
-          汇总华尔街主流投行与研究机构对热门中概及美股的最新观点，涵盖评级、目标价与核心逻辑。
+          汇总华尔街主流投行与研究机构对热门美股的最新观点，涵盖评级、目标价与核心逻辑。点击卡片可跳转至 Yahoo Finance 分析师页面查看详情。
         </p>
       </section>
 
@@ -116,21 +111,25 @@ export function ResearchPage() {
           <p className="muted">当前筛选条件下暂无研报。</p>
         ) : (
           filtered.map((r) => (
-            <article key={r.id} className="research-card">
+            <a
+              key={r.id}
+              href={r.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="research-card"
+            >
               <div className="research-card-top">
                 <div className="research-card-meta">
                   <span className="research-card-firm">{r.firm}</span>
                   <span className="research-card-date" aria-label={`发布日期 ${r.date}`}>
-                    {formatDate(r.date)}
+                    {r.date}
                   </span>
                 </div>
                 <span className={"research-rating " + ratingClass[r.rating]}>{r.rating}</span>
               </div>
 
               <h3 className="research-card-title">
-                <Link to={`/stock/${encodeURIComponent(r.symbol)}`} className="text-link">
-                  {r.symbol}
-                </Link>
+                <span className="research-card-symbol">{r.symbol}</span>
                 <span className="research-card-name">{r.nameZh}</span>
                 {r.targetPrice ? (
                   <span className="research-card-target">
@@ -141,13 +140,17 @@ export function ResearchPage() {
 
               <p className="research-card-headline">{r.title}</p>
               <p className="research-card-summary">{r.summary}</p>
-            </article>
+
+              <div className="research-card-foot">
+                <span className="research-card-source">查看来源 ↗</span>
+              </div>
+            </a>
           ))
         )}
       </div>
 
       <p className="disclaimer">
-        以上研报内容为教学演示数据，非实时行情或真实投资建议。实际研报请以各机构官方发布为准。
+        以上研报数据基于公开市场信息整理，仅供参考，不构成投资建议。点击卡片将跳转至 Yahoo Finance 分析师页面。
       </p>
     </main>
   );

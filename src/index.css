@@ -1397,11 +1397,14 @@ a {
 }
 
 .research-card {
+  display: block;
+  text-decoration: none;
   padding: 20px 22px;
   border-radius: var(--radius-lg);
   background: var(--bg1);
   border: 1px solid var(--line);
   transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
 }
 
 .research-card:hover {
@@ -1481,6 +1484,12 @@ a {
   flex-wrap: wrap;
 }
 
+.research-card-symbol {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--blue);
+}
+
 .research-card-name {
   font-size: 14px;
   font-weight: 600;
@@ -1511,6 +1520,25 @@ a {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+.research-card-foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.research-card-source {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  font-family: var(--font-mono);
+}
+
+.research-card:hover .research-card-source {
+  text-decoration: underline;
 }
 
 /* ── Scrollbar ── */
