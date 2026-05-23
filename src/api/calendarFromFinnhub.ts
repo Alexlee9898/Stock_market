@@ -11,7 +11,13 @@ import type {
   FinnhubEconomicCalendarRow,
   FinnhubIpoCalendarRow,
 } from "./finnhub";
-import { getEarningsCalendar, getEconomicCalendar, getIpoCalendar, type CalendarRange } from "./finnhub";
+import {
+  formatFiscalQuarterLabel,
+  getEarningsCalendar,
+  getEconomicCalendar,
+  getIpoCalendar,
+  type CalendarRange,
+} from "./finnhub";
 
 function hourLabel(hour: string | undefined) {
   if (!hour) return undefined;
@@ -47,13 +53,16 @@ function mapEarningsRow(row: FinnhubEarningsCalendarRow, idx: number): CalendarE
   const sym = row.symbol?.trim();
   const date = row.date?.trim();
   if (!sym || !date) return null;
-  const q = row.quarter != null && row.year != null ? `${row.year} Q${row.quarter}` : "财报";
-  const title = `${sym} 财报（${q}）`;
+  const hasFq = row.quarter != null && row.year != null;
+  const fq = hasFq ? formatFiscalQuarterLabel(row.year!, row.quarter!) : null;
+  const title = fq ? `${sym} 财报（${fq}）` : `${sym} 财报`;
+  const time = hourLabel(row.hour);
   return {
     id: `fh-earn-${date}-${sym}-${idx}`,
     date,
-    time: hourLabel(row.hour),
+    time,
     title,
+    detail: fq ? "财年/财季口径（与自然年可能不一致，如 2026 年 5 月披露 FY27 Q1）" : undefined,
     category: "earnings",
     symbol: sym,
   };

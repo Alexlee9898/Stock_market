@@ -9,7 +9,7 @@ export function NavBar() {
       <div className="nav-inner">
         <Link to="/" className="nav-brand">
           <span className="nav-brand-mark" aria-hidden />
-          美股学习
+          股票学习
         </Link>
         <nav className="nav-links" aria-label="主导航">
           <NavLink to="/" className={({ isActive }) => "nav-link" + (isActive ? " nav-link--active" : "")} end>

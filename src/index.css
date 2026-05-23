@@ -1051,10 +1051,18 @@ a {
   color: var(--text-secondary);
 }
 
+.home-market-filter {
+  margin-top: 20px;
+}
+
 .market-filter {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.home-market-soon {
+  margin-top: 4px;
 }
 
 .market-chip {

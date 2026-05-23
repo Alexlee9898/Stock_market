@@ -21,7 +21,7 @@ export default function App() {
           <Route path="/research" element={<ResearchPage />} />
         </Routes>
         <footer className="site-footer">
-          <p>US MARKET LEARN · TERMINAL UI v1 · 非投资建议</p>
+          <p>STOCK LEARNING · TERMINAL UI v1 · 非投资建议</p>
         </footer>
       </div>
     </BrowserRouter>

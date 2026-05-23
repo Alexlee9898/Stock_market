@@ -432,6 +432,15 @@ export function safe52WeekHighLow(
   return { high, low };
 }
 
+/**
+ * Finnhub 财报日历与 earnings 历史中的 year/quarter 为财年/财季（fiscal），非自然年。
+ * 例如 NVDA 在 2026 年 5 月披露的是 FY2027 Q1（财年截至约 2026 年 4 月）。
+ */
+export function formatFiscalQuarterLabel(year: number, quarter: number): string {
+  const yy = year >= 2000 ? String(year).slice(-2) : String(year);
+  return `FY${yy} Q${quarter}`;
+}
+
 /** Finnhub /stock/earnings 的 revenueActual → 十亿美元（启发式） */
 export function revenueActualToBillionsUsd(revenue: number | null | undefined): number | undefined {
   if (revenue == null || !Number.isFinite(revenue) || revenue <= 0) return undefined;

@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import {
   computeRevenueYoyPercent,
+  formatFiscalQuarterLabel,
   formatMarketCapResolved,
   formatPercent,
   formatUsd,
@@ -331,9 +332,10 @@ function mergeEarningsReport(
   const marginsAreTtm =
     grossMarginQuarter == null && opMarginQuarter == null && netMarginQuarter == null && (grossTtm != null || opTtm != null || netTtm != null);
 
-  const quarterLabel = latestEps?.year != null && latestEps.quarter != null
-    ? `${latestEps.year} Q${latestEps.quarter}`
-    : ic?.period
+  const quarterLabel =
+    latestEps?.year != null && latestEps.quarter != null
+      ? formatFiscalQuarterLabel(latestEps.year, latestEps.quarter)
+      : ic?.period
       ? `截至 ${ic.period.slice(0, 10)}`
       : base?.quarter ?? "最近一季";
 

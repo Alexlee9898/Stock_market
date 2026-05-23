@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import type { FinnhubQuote, FinnhubScreenerRow } from "../api/finnhub";
 import {
   getQuote,
@@ -10,8 +11,16 @@ import {
 import { StockCard } from "../components/StockCard";
 import { StockSearch } from "../components/StockSearch";
 import { MEGA_CAP_FALLBACK_TICKERS, MEGA_EXTRA_TICKERS, MEGA_FALLBACK_CARD_META } from "../data/megaCapFallback";
-import type { HotStock } from "../types";
+import type { EquityMarket, HotStock } from "../types";
 import { accentFromSymbol } from "../utils/symbolAccent";
+
+type HomeMarket = EquityMarket;
+
+const HOME_MARKET_LABEL: Record<HomeMarket, string> = {
+  us: "美股",
+  cn: "A股",
+  hk: "港股",
+};
 
 /** 1 万亿美元 = 1000 「十亿美元」档位，与 screenUsStocksByMarketCapMinBillion 参数一致 */
 const MEGA_MIN_BILLION = 1000;
@@ -97,6 +106,7 @@ async function loadQuotesChunked(symbols: string[], chunk = 10): Promise<Record<
 
 export function Home() {
   const quoteFetchGen = useRef(0);
+  const [market, setMarket] = useState<HomeMarket>("us");
   const [megaStocks, setMegaStocks] = useState<HotStock[]>([]);
   const [megaLoading, setMegaLoading] = useState(true);
   const [quotes, setQuotes] = useState<Record<string, FinnhubQuote | null>>({});
@@ -130,7 +140,7 @@ export function Home() {
   }, []);
 
   useEffect(() => {
-    if (megaStocks.length === 0) return;
+    if (market !== "us" || megaStocks.length === 0) return;
     const gen = ++quoteFetchGen.current;
     let cancelled = false;
     setQuotesLoading(true);
@@ -146,7 +156,7 @@ export function Home() {
     return () => {
       cancelled = true;
     };
-  }, [megaStocks]);
+  }, [market, megaStocks]);
 
   const sortedStocks = useMemo(() => {
     return [...megaStocks].sort((a, b) => a.symbol.localeCompare(b.symbol));
@@ -155,29 +165,58 @@ export function Home() {
   return (
     <main className="page">
       <section className="hero">
-        <p className="hero-eyebrow">US Market Terminal</p>
+        <p className="hero-eyebrow">Stock Learning</p>
         <h1 className="hero-title">
-          美股数据终端
+          股票学习
           <br />
           公司 · 财报 · 财经日程
         </h1>
-        <p className="hero-sub">实时行情、产业研究、财经日历一体化视图</p>
+        <p className="hero-sub">覆盖美股、A股、港股；行情与自选列表逐步完善中</p>
+
+        <div className="market-filter home-market-filter" role="tablist" aria-label="市场切换">
+          {(["us", "cn", "hk"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={market === key}
+              className={"market-chip" + (market === key ? " market-chip--active" : "")}
+              onClick={() => setMarket(key)}
+            >
+              {HOME_MARKET_LABEL[key]}
+            </button>
+          ))}
+        </div>
       </section>
 
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">热门美股</h2>
-          <StockSearch inline />
+          <h2 className="section-title">热门{HOME_MARKET_LABEL[market]}</h2>
+          {market === "us" ? <StockSearch inline /> : null}
         </div>
 
-        {megaLoading ? <p className="muted">正在加载大盘股列表…</p> : null}
-
-        <div className="stock-grid">
-          {sortedStocks.map((s) => {
-            const qKey = normalizeTickerSymbol(s.symbol);
-            return <StockCard key={s.symbol} stock={s} quote={quotes[qKey]} quoteLoading={quotesLoading} />;
-          })}
-        </div>
+        {market === "us" ? (
+          <>
+            {megaLoading ? <p className="muted">正在加载大盘股列表…</p> : null}
+            <div className="stock-grid">
+              {sortedStocks.map((s) => {
+                const qKey = normalizeTickerSymbol(s.symbol);
+                return <StockCard key={s.symbol} stock={s} quote={quotes[qKey]} quoteLoading={quotesLoading} />;
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="panel home-market-soon">
+            <p className="panel-prose">
+              {HOME_MARKET_LABEL[market]}行情、搜索与热门列表即将上线。可先前往
+              <Link to="/industries" className="text-link">
+                {" "}
+                产业研究
+              </Link>
+              ，在对应板块中按市场筛选查看 {HOME_MARKET_LABEL[market]} 核心标的。
+            </p>
+          </div>
+        )}
       </section>
     </main>
   );

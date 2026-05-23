@@ -52,7 +52,7 @@ export function ResearchPage() {
         <p className="hero-eyebrow">Institutional Research</p>
         <h1 className="hero-title">机构研报</h1>
         <p className="hero-sub">
-          汇总华尔街主流投行与研究机构对热门美股的最新观点，涵盖评级、目标价与核心逻辑。点击卡片可跳转至 Yahoo Finance 分析师页面查看详情。
+          当前汇总华尔街主流投行与研究机构对热门美股的最新观点，涵盖评级、目标价与核心逻辑。点击卡片可跳转至 Yahoo Finance 分析师页面查看详情。
         </p>
       </section>
 
